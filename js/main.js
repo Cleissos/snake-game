@@ -16,6 +16,17 @@ boatImage.src = "assets/boat.png";
 const snakeImage = new Image();
 snakeImage.src = "assets/snake.png";
 
+const boatUpgradeImage = new Image();
+boatUpgradeImage.src = "assets/barquinho3 (2).png";
+
+// Obstáculos
+const obstacleImage = new Image();
+obstacleImage.src = "assets/tronco.png"; // ex.: tronco, pedra, etc.
+
+// Upgrade
+const upgradeImage = new Image();
+upgradeImage.src = "assets/estrela.png";
+
 let wavesOffset = 0;
 let particles = [];
 
@@ -51,6 +62,9 @@ const player = {
     width: 40,
     height: 60,
 
+    baseWidth: 40,  // para voltar ao normal depois
+    baseHeight: 60,
+
     // Velocidades
     velocityX: 0,
     velocityY: 0,
@@ -67,8 +81,27 @@ const player = {
     frictionX: 0.95,
     frictionY: 0.95,
 
-    boosting: false
+    boosting: false,
+
+    // NOVO: upgrade
+    upgraded: false,
+    upgradeTimer: 0,   // duração do upgrade em frames
 };
+
+let upgrades = [];
+
+function spawnUpgrade() {
+    upgrades.push({
+        x: Math.random() * (canvas.width - 40),
+        y: -50,
+        width: 40,
+        height: 40,
+        speed: 2,
+        type: "powerboat", // só como exemplo
+        image: upgradeImage // referencia da imagem
+    });
+}
+setInterval(spawnUpgrade, 10000)
 
 
 let keys = {};
@@ -105,31 +138,6 @@ function showRestartButton() {
 }
 
 
-// function showRestartButton() {
-//     // Criar botão
-//     const button = document.createElement("button");
-//     button.id = "restartButton";
-//     button.textContent = "Jogar Novamente";
-
-//     // Estilizar botão
-//     button.style.position = "absolute";
-//     button.style.left = "50%";
-//     button.style.top = "300px";
-//     button.style.transform = "translateX(-50%)";
-//     button.style.padding = "15px 30px";
-//     button.style.fontSize = "20px";
-//     button.style.cursor = "pointer";
-//     button.style.backgroundColor = "#1e90ff";
-//     button.style.color = "white";
-//     button.style.border = "none";
-//     button.style.borderRadius = "10px";
-
-//     // Adicionar evento
-//     button.addEventListener("click", restartGame);
-
-//     document.body.appendChild(button);
-// }
-
 function restartGame() {
     // Remover botão
     const button = document.getElementById("restartButton");
@@ -160,7 +168,8 @@ function spawnObstacle() {
         y: -50,
         width: 40,
         height: 40,
-        speed: 3
+        speed: 3,
+        image: obstacleImage
     });
 }
 
@@ -182,8 +191,14 @@ function updateObstacles() {
             player.y < obs.y + obs.height &&
             player.y + player.height > obs.y
         ) {
-            obstacles.splice(index, 1);
-            loseLife();
+            if (!player.upgraded) {
+                obstacles.splice(index, 1);
+                loseLife();
+            } else {
+                obstacles.splice(index, 1);
+            }
+
+            // loseLife();
         }
 
     });
@@ -194,7 +209,8 @@ function drawObstacles() {
     ctx.fillStyle = "brown";
 
     obstacles.forEach(obs => {
-        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        // ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
     });
 }
 
@@ -226,6 +242,41 @@ function loseLife() {
     }
 }
 
+function drawLives() {
+    const heartSize = 30; // tamanho do coração
+    const padding = 10;   // distância entre eles
+
+    for (let i = 0; i < lives; i++) {
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        const x = padding + i * (heartSize + padding);
+        const y = 20;
+
+        // forma simples de coração usando curvas
+        ctx.moveTo(x + heartSize / 2, y + heartSize / 4);
+        ctx.bezierCurveTo(
+            x + heartSize / 2, y,
+            x, y,
+            x, y + heartSize / 4
+        );
+        ctx.bezierCurveTo(
+            x, y + heartSize / 2,
+            x + heartSize / 2, y + heartSize * 0.75,
+            x + heartSize / 2, y + heartSize
+        );
+        ctx.bezierCurveTo(
+            x + heartSize / 2, y + heartSize * 0.75,
+            x + heartSize, y + heartSize / 2,
+            x + heartSize, y + heartSize / 4
+        );
+        ctx.bezierCurveTo(
+            x + heartSize, y,
+            x + heartSize / 2, y,
+            x + heartSize / 2, y + heartSize / 4
+        );
+        ctx.fill();
+    }
+}
 
 function updateSnake() {
 
@@ -272,7 +323,14 @@ function updateSnake() {
             player.y < snake.y + snake.height &&
             player.y + player.height > snake.y
         ) {
-            gameState = "gameover";
+            if (!player.upgraded) {
+                gameState = "gameover";
+            } else {
+                // Cobra não mata, talvez some depois de algumas “marteladas”
+                // opcional: você pode adicionar um efeito de partículas ou recuo da cobra
+                snake.x -= 20; // recua
+            }
+
         }
     }
 }
@@ -338,8 +396,54 @@ function update() {
         updatePlayer();
         updateSnake();
         updateObstacles();
+        updateUpgrades();
+    }
+
+}
+
+function updateUpgrades() {
+    upgrades.forEach((up, index) => {
+        up.y += up.speed;
+
+        // colisão com o jogador
+        if (
+            player.x < up.x + up.width &&
+            player.x + player.width > up.x &&
+            player.y < up.y + up.height &&
+            player.y + player.height > up.y
+        ) {
+            player.upgraded = true;
+            player.upgradeTimer = 600; // duração do upgrade, ex: 600 frames = 10 segundos se rodando 60fps
+            player.width = 80;  // aumenta tamanho
+            player.height = 120;
+
+            upgrades.splice(index, 1);
+        }
+
+        // remover se sair da tela
+        if (up.y > canvas.height) {
+            upgrades.splice(index, 1);
+        }
+    });
+
+    // reduzir o timer do upgrade
+    if (player.upgraded) {
+        player.upgradeTimer--;
+        if (player.upgradeTimer <= 0) {
+            player.upgraded = false;
+            player.width = player.baseWidth;
+            player.height = player.baseHeight;
+        }
     }
 }
+
+function drawUpgrades() {
+    upgrades.forEach(up => {
+        ctx.drawImage(up.image, up.x, up.y, up.width, up.height);
+    });
+}
+
+
 
 function draw() {
 
@@ -383,20 +487,66 @@ function drawMenu() {
     ctx.fillText("Pressione ENTER para começar", 250, 300);
 }
 
-
 function drawGame() {
-
+    // ================================
+    // 1️⃣ Desenhar rio e ondas
+    // ================================
     drawRiver();
-    drawWaterWaves()
+    drawWaterWaves(); // função que cria ondas animadas
+
+    // ================================
+    // 2️⃣ Desenhar obstáculos
+    // ================================
     drawObstacles();
 
+    drawUpgrades();
+    // ================================
+    // 3️⃣ Desenhar vidas do jogador
+    // ================================
+    drawLives();
+
+    // ================================
+    // 4️⃣ Desenhar cobra se estiver ativa
+    // ================================
     if (snakeActive) {
-        drawSnake(); // desenha primeiro
+        drawSnake();
     }
 
-    drawPlayer();   // barco por cima
+    // ================================
+    // 5️⃣ Desenhar jogador
+    // ================================
+    if (player.upgraded) {
+        // 🚤 Barco com upgrade
+        ctx.drawImage(
+            boatUpgradeImage,
+            player.x,
+            player.y,
+            player.width,
+            player.height
+        );
+    } else {
+        // 🚤 Barco normal
+        ctx.drawImage(
+            boatImage,
+            player.x,
+            player.y,
+            player.width,
+            player.height
+        );
+    }
+
+    // ================================
+    // 6️⃣ Desenhar partículas de água
+    // ================================
     drawWaterTrail();
+
+    // ================================
+    // 7️⃣ Opcional: efeitos adicionais
+    // ================================
+    // ex.: partículas de turbo, faíscas, etc.
 }
+
+
 
 
 // =============================
@@ -584,12 +734,12 @@ function drawWaterWaves() {
     const waveCount = 20;        // número de ondas no rio
 
     for (let i = 0; i < waveCount; i++) {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 + i*0.05})`; // transparencia suave
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 + i * 0.05})`; // transparencia suave
         ctx.lineWidth = 2;
         ctx.beginPath();
 
         for (let x = 0; x < canvas.width; x++) {
-            let y = canvas.height/3 + i * 20 + Math.sin((x * 0.05) + (Date.now() * waveSpeed) + i) * waveHeight;
+            let y = canvas.height / 3 + i * 20 + Math.sin((x * 0.05) + (Date.now() * waveSpeed) + i) * waveHeight;
             if (x === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
@@ -654,42 +804,62 @@ document.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
 
+// Início do jogo no menu
 // canvas.addEventListener("touchstart", (e) => {
-
 //     if (gameState === "menu") {
 //         startGame();
+//         return; // não processa direção ainda
 //     }
 
 //     const touch = e.touches[0];
-//     if (touch.clientX < window.innerWidth / 2) keys["ArrowLeft"] = true;
+//     const rect = canvas.getBoundingClientRect();
+//     const x = touch.clientX - rect.left;
+//     const y = touch.clientY - rect.top;
+
+//     if (x < canvas.width / 2) keys["ArrowLeft"] = true;
 //     else keys["ArrowRight"] = true;
 
-//     if (touch.clientY < window.innerHeight / 2) keys["ArrowUp"] = true;
+//     if (y < canvas.height / 2) keys["ArrowUp"] = true;
 //     else keys["ArrowDown"] = true;
 // });
 
-// canvas.addEventListener("touchend", () => {
-//     keys = {}; // limpa todos os movimentos
-// });
+function createMobileControls() {
+    const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    const labels = ["⬅️", "➡️", "⬆️", "⬇️"];
+    const positions = [
+        { left: "5%", bottom: "10%" },
+        { left: "20%", bottom: "10%" },
+        { left: "80%", bottom: "20%" },
+        { left: "80%", bottom: "5%" }
+    ];
 
-// Início do jogo no menu
-canvas.addEventListener("touchstart", (e) => {
-    if (gameState === "menu") {
-        startGame();
-        return; // não processa direção ainda
-    }
+    directions.forEach((key, i) => {
+        const btn = document.createElement("button");
+        btn.innerText = labels[i];
+        btn.style.position = "fixed";
+        btn.style.left = positions[i].left;
+        btn.style.bottom = positions[i].bottom;
+        btn.style.width = "60px";
+        btn.style.height = "60px";
+        btn.style.fontSize = "30px";
+        btn.style.borderRadius = "10px";
+        btn.style.background = "rgba(30,144,255,0.7)";
+        btn.style.color = "white";
+        btn.style.border = "none";
+        btn.style.zIndex = 1000;
 
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    const x = touch.clientX - rect.left;
-    const y = touch.clientY - rect.top;
+        // Pressionar → marca tecla como true
+        btn.addEventListener("touchstart", () => keys[key] = true);
+        // Soltar → marca tecla como false
+        btn.addEventListener("touchend", () => keys[key] = false);
 
-    if (x < canvas.width / 2) keys["ArrowLeft"] = true;
-    else keys["ArrowRight"] = true;
+        document.body.appendChild(btn);
+    });
+}
 
-    if (y < canvas.height / 2) keys["ArrowUp"] = true;
-    else keys["ArrowDown"] = true;
-});
+// chama essa função depois de inicializar o canvas
+createMobileControls();
+
 
 // Para soltar a tecla quando tira o dedo
 canvas.addEventListener("touchend", (e) => {
