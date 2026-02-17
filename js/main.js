@@ -823,6 +823,16 @@ document.addEventListener("keyup", (e) => {
 //     else keys["ArrowDown"] = true;
 // });
 
+// toque geral para iniciar o jogo
+canvas.addEventListener("touchstart", (e) => {
+    if (gameState === "menu") {
+        startGame();
+        e.preventDefault(); // evita rolagem da tela
+        return;
+    }
+});
+
+
 function createMobileControls() {
     const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
     const labels = ["⬅️", "➡️", "⬆️", "⬇️"];
