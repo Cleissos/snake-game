@@ -654,22 +654,49 @@ document.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
 
-canvas.addEventListener("touchstart", (e) => {
+// canvas.addEventListener("touchstart", (e) => {
 
+//     if (gameState === "menu") {
+//         startGame();
+//     }
+
+//     const touch = e.touches[0];
+//     if (touch.clientX < window.innerWidth / 2) keys["ArrowLeft"] = true;
+//     else keys["ArrowRight"] = true;
+
+//     if (touch.clientY < window.innerHeight / 2) keys["ArrowUp"] = true;
+//     else keys["ArrowDown"] = true;
+// });
+
+// canvas.addEventListener("touchend", () => {
+//     keys = {}; // limpa todos os movimentos
+// });
+
+// Início do jogo no menu
+canvas.addEventListener("touchstart", (e) => {
     if (gameState === "menu") {
         startGame();
+        return; // não processa direção ainda
     }
 
     const touch = e.touches[0];
-    if (touch.clientX < window.innerWidth / 2) keys["ArrowLeft"] = true;
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+
+    if (x < canvas.width / 2) keys["ArrowLeft"] = true;
     else keys["ArrowRight"] = true;
 
-    if (touch.clientY < window.innerHeight / 2) keys["ArrowUp"] = true;
+    if (y < canvas.height / 2) keys["ArrowUp"] = true;
     else keys["ArrowDown"] = true;
 });
 
-canvas.addEventListener("touchend", () => {
-    keys = {}; // limpa todos os movimentos
+// Para soltar a tecla quando tira o dedo
+canvas.addEventListener("touchend", (e) => {
+    keys["ArrowLeft"] = false;
+    keys["ArrowRight"] = false;
+    keys["ArrowUp"] = false;
+    keys["ArrowDown"] = false;
 });
 
 
