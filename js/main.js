@@ -833,42 +833,103 @@ canvas.addEventListener("touchstart", (e) => {
 });
 
 
+// function createMobileControls() {
+//     const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+//     const labels = ["⬅️", "➡️", "⬆️", "⬇️"];
+//     const positions = [
+//         { left: "5%", bottom: "10%" },
+//         { left: "20%", bottom: "10%" },
+//         { left: "80%", bottom: "20%" },
+//         { left: "80%", bottom: "5%" }
+//     ];
+
+//     directions.forEach((key, i) => {
+//         const btn = document.createElement("button");
+//         btn.innerText = labels[i];
+//         btn.style.position = "fixed";
+//         btn.style.left = positions[i].left;
+//         btn.style.bottom = positions[i].bottom;
+//         btn.style.width = "60px";
+//         btn.style.height = "60px";
+//         btn.style.fontSize = "30px";
+//         btn.style.borderRadius = "10px";
+//         btn.style.background = "rgba(30,144,255,0.7)";
+//         btn.style.color = "white";
+//         btn.style.border = "none";
+//         btn.style.zIndex = 1000;
+
+//         // Pressionar → marca tecla como true
+//         btn.addEventListener("touchstart", () => keys[key] = true);
+//         // Soltar → marca tecla como false
+//         btn.addEventListener("touchend", () => keys[key] = false);
+
+//         document.body.appendChild(btn);
+//     });
+// }
+
 function createMobileControls() {
-    const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
-    const labels = ["⬅️", "➡️", "⬆️", "⬇️"];
-    const positions = [
-        { left: "5%", bottom: "10%" },
-        { left: "20%", bottom: "10%" },
-        { left: "80%", bottom: "20%" },
-        { left: "80%", bottom: "5%" }
-    ];
+    // Verifica se já existem
+    if (document.getElementById("mobileControls")) return;
 
-    directions.forEach((key, i) => {
-        const btn = document.createElement("button");
-        btn.innerText = labels[i];
-        btn.style.position = "fixed";
-        btn.style.left = positions[i].left;
-        btn.style.bottom = positions[i].bottom;
-        btn.style.width = "60px";
-        btn.style.height = "60px";
-        btn.style.fontSize = "30px";
-        btn.style.borderRadius = "10px";
-        btn.style.background = "rgba(30,144,255,0.7)";
-        btn.style.color = "white";
-        btn.style.border = "none";
-        btn.style.zIndex = 1000;
+    // Só ativa para telas menores (tablet/celular)
+    if (window.innerWidth > 900) return;
 
-        // Pressionar → marca tecla como true
-        btn.addEventListener("touchstart", () => keys[key] = true);
-        // Soltar → marca tecla como false
-        btn.addEventListener("touchend", () => keys[key] = false);
-
-        document.body.appendChild(btn);
+    const container = document.createElement("div");
+    container.id = "mobileControls";
+    
+    // Estilo do container
+    Object.assign(container.style, {
+        position: "fixed",
+        bottom: "20px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex",
+        gap: "10px",
+        zIndex: 1000,
     });
+
+    const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    directions.forEach(dir => {
+        const btn = document.createElement("button");
+        btn.textContent = dir.replace("Arrow", ""); // só mostra Left, Right, Up, Down
+        btn.style.padding = "20px 25px";
+        btn.style.fontSize = "16px";
+        btn.style.borderRadius = "10px";
+        btn.style.border = "none";
+        btn.style.background = "#1e90ff";
+        btn.style.color = "white";
+        btn.style.touchAction = "none"; // previne scroll do navegador
+
+        // Eventos de toque
+        btn.addEventListener("touchstart", (e) => {
+            keys[dir] = true;
+            e.preventDefault();
+        });
+        btn.addEventListener("touchend", (e) => {
+            keys[dir] = false;
+            e.preventDefault();
+        });
+
+        container.appendChild(btn);
+    });
+
+    document.body.appendChild(container);
 }
+
 
 // chama essa função depois de inicializar o canvas
 createMobileControls();
+
+window.addEventListener("resize", () => {
+    const container = document.getElementById("mobileControls");
+    if (!container) return;
+    if (window.innerWidth > 900) {
+        container.style.display = "none";
+    } else {
+        container.style.display = "flex";
+    }
+});
+
 
 
 // Para soltar a tecla quando tira o dedo
