@@ -621,6 +621,24 @@ function drawWaterTrail() {
     });
 }
 
+function startGame() {
+    gameState = "playing";
+    lives = 3;
+    snakeActive = false;
+    snake.emerging = false;
+    snake.x = canvas.width / 2;
+    snake.y = canvas.height + 200;
+
+    player.x = canvas.width / 2;
+    player.y = canvas.height - 100;
+    player.velocityX = 0;
+    player.velocityY = 0;
+
+    obstacles = [];
+    particles = [];
+}
+
+
 // =============================
 // TECLADO
 // =============================
@@ -637,6 +655,11 @@ document.addEventListener("keyup", (e) => {
 });
 
 canvas.addEventListener("touchstart", (e) => {
+
+    if (gameState === "menu") {
+        startGame();
+    }
+
     const touch = e.touches[0];
     if (touch.clientX < window.innerWidth / 2) keys["ArrowLeft"] = true;
     else keys["ArrowRight"] = true;
