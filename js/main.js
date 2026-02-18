@@ -50,7 +50,8 @@ const snake = {
     y: canvas.height + 200, // começa fora da tela
     width: 80,
     height: 80,
-    speed: 1,
+    speed: 1.2,          // perseguição
+    emergeSpeed: 0.8,    // surgimento
     emerging: false
 };
 
@@ -300,12 +301,19 @@ function drawLives() {
 }
 
 function updateSnake() {
+    // if (snake.emerging) {
+    //     // Fase de surgimento
+    //     snake.y -= 4;
+    //     if (snake.y < player.y + 150) snake.emerging = false;
+    //     return;
+    // }
+
     if (snake.emerging) {
-        // Fase de surgimento
-        snake.y -= 4;
+        snake.y -= snake.emergeSpeed;
         if (snake.y < player.y + 150) snake.emerging = false;
         return;
     }
+
 
     if (!snakeActive) return;
 
@@ -345,11 +353,6 @@ function drawGameOver() {
     ctx.font = "50px Arial";
     // ctx.fillText("GAME OVER", 250, 300);
     ctx.fillText("GAME OVER", canvas.width / 2 - 150, canvas.height / 2);
-
-    // Mostrar botão
-    // if (!document.getElementById("restartButton")) {
-    //     showRestartButton();
-    // }
 
     const controls = document.getElementById("mobileControls");
     if (controls) controls.style.display = "none";
