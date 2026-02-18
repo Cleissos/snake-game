@@ -50,7 +50,7 @@ const snake = {
     y: canvas.height + 200, // começa fora da tela
     width: 80,
     height: 80,
-    speed: .5,
+    speed: 0.5,
     emerging: false
 };
 
