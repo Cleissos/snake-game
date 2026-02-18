@@ -1,14 +1,6 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-// function resizeCanvas() {
-//     canvas.width = window.innerWidth;
-//     canvas.height = window.innerHeight;
-// }
-
-// window.addEventListener("resize", resizeCanvas);
-// resizeCanvas(); // inicializa o tamanho correto
-
 let riverSpeed = 3;
 let riverAcceleration = 0.02;
 let maxRiverSpeed = 8;
@@ -108,12 +100,10 @@ function resizeCanvas() {
     player.y = canvas.height * 0.6;
 }
 
-
-window.addEventListener("resize", resizeCanvas);
-window.addEventListener("orientationchange", resizeCanvas);
-
-window.addEventListener("resize", resizeCanvas);
-window.addEventListener("orientationchange", resizeCanvas);
+window.addEventListener("resize", () => {
+    resizeCanvas();
+    updateMobileControls();
+});
 
 window.addEventListener("load", () => {
     setTimeout(() => {
@@ -772,8 +762,6 @@ function createBoatWaves() {
     }
 }
 
-
-
 function drawWaterWaves() {
     const waveHeight = 5;      // altura da onda
     const waveLength = 100;     // comprimento da onda
@@ -817,23 +805,31 @@ function drawWaterTrail() {
 
 
 function startGame() {
+
     gameState = "playing";
+
     resizeCanvas();
-    updateMobileControls(); // 👈 ESSENCIAL
+
+    createMobileControls();   // garante que existe
+    updateMobileControls();   // posiciona corretamente
+
     lives = 3;
     snakeActive = false;
     snake.emerging = false;
+
     snake.x = canvas.width / 2;
     snake.y = canvas.height + 200;
 
-    player.x = canvas.width / 2;
-    player.y = canvas.height - 100;
+    player.x = canvas.width / 2 - player.width / 2;
+    player.y = canvas.height * 0.6;
+
     player.velocityX = 0;
     player.velocityY = 0;
 
     obstacles = [];
     particles = [];
 }
+
 
 // =============================
 // TECLADO
@@ -923,33 +919,22 @@ function createMobileControls() {
     document.body.appendChild(container);
 }
 
-
-
 // chama essa função depois de inicializar o canvas
 createMobileControls();
 
-window.addEventListener("resize", () => {
-    const container = document.getElementById("mobileControls");
-    if (!container) return;
-    if (window.innerWidth > 900) {
-        container.style.display = "none";
-    } else {
-        container.style.display = "flex";
-    }
-});
-
 function updateMobileControls() {
 
-    const isMobile = window.innerWidth <= 1024;
-
     const controls = document.getElementById("mobileControls");
+    if (!controls) return;
+
+    const isMobile = window.innerWidth <= 900;
 
     if (!isMobile || gameState !== "playing") {
         controls.style.display = "none";
         return;
     }
 
-    controls.style.display = "flex";
+    controls.style.display = "grid"; // ⚠️ IMPORTANTE: grid, não flex
 }
 
 
