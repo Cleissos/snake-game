@@ -1,7 +1,7 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let riverSpeed = 3;
+let riverSpeed = 1.5;
 let riverAcceleration = 0.02;
 let maxRiverSpeed = 8;
 
@@ -197,7 +197,7 @@ function spawnObstacle() {
         y: -50,
         width: 40,
         height: 40,
-        speed: 1,
+        speed: 3,
         image: obstacleImage
     });
 }
