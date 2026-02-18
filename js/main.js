@@ -167,6 +167,12 @@ function restartGame() {
     player.velocityY = 0;
 
     particles = [];
+
+    const controls = document.getElementById("mobileControls");
+if (controls && window.innerWidth <= 900) {
+    controls.style.display = "grid";
+}
+
 }
 
 
@@ -325,12 +331,18 @@ function drawGameOver() {
 
     ctx.fillStyle = "red";
     ctx.font = "50px Arial";
-    ctx.fillText("GAME OVER", 250, 300);
+    // ctx.fillText("GAME OVER", 250, 300);
+    ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
 
     // Mostrar botão
-    if (!document.getElementById("restartButton")) {
-        showRestartButton();
-    }
+    // if (!document.getElementById("restartButton")) {
+    //     showRestartButton();
+    // }
+
+    const controls = document.getElementById("mobileControls");
+    if (controls) controls.style.display = "none";
+
+    showRestartButton();
 }
 
 function drawSnake() {
@@ -831,54 +843,117 @@ canvas.addEventListener("touchstart", (e) => {
 
 
 
+// function createMobileControls() {
+//     // Verifica se já existem
+//     if (document.getElementById("mobileControls")) return;
+
+//     // Só ativa para telas menores (tablet/celular)
+//     if (window.innerWidth > 900) return;
+
+//     const container = document.createElement("div");
+//     container.id = "mobileControls";
+
+//     // Estilo do container
+//     Object.assign(container.style, {
+//         position: "fixed",
+//         bottom: "20px",
+//         left: "50%",
+//         transform: "translateX(-50%)",
+//         display: "flex",
+//         gap: "10px",
+//         zIndex: 1000,
+//     });
+
+//     const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+//     directions.forEach(dir => {
+//         const btn = document.createElement("button");
+//         btn.textContent = dir.replace("Arrow", ""); // só mostra Left, Right, Up, Down
+//         btn.style.padding = "20px 25px";
+//         btn.style.fontSize = "16px";
+//         btn.style.borderRadius = "10px";
+//         btn.style.border = "none";
+//         btn.style.background = "#1e90ff";
+//         btn.style.color = "white";
+//         btn.style.touchAction = "none"; // previne scroll do navegador
+
+//         // Eventos de toque
+//         btn.addEventListener("touchstart", (e) => {
+//             keys[dir] = true;
+//             e.preventDefault();
+//         });
+//         btn.addEventListener("touchend", (e) => {
+//             keys[dir] = false;
+//             e.preventDefault();
+//         });
+
+//         container.appendChild(btn);
+//     });
+
+//     document.body.appendChild(container);
+// }
+
 function createMobileControls() {
-    // Verifica se já existem
+
     if (document.getElementById("mobileControls")) return;
 
-    // Só ativa para telas menores (tablet/celular)
+    // Só para celular / tablet
     if (window.innerWidth > 900) return;
 
     const container = document.createElement("div");
     container.id = "mobileControls";
 
-    // Estilo do container
     Object.assign(container.style, {
         position: "fixed",
-        bottom: "20px",
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        gap: "10px",
+        bottom: "40px",
+        left: "30px",
+        width: "150px",
+        height: "150px",
         zIndex: 1000,
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gridTemplateRows: "1fr 1fr 1fr",
+        opacity: "0.6",              // Transparente
+        pointerEvents: "auto"
     });
 
-    const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
-    directions.forEach(dir => {
-        const btn = document.createElement("button");
-        btn.textContent = dir.replace("Arrow", ""); // só mostra Left, Right, Up, Down
-        btn.style.padding = "20px 25px";
-        btn.style.fontSize = "16px";
-        btn.style.borderRadius = "10px";
-        btn.style.border = "none";
-        btn.style.background = "#1e90ff";
-        btn.style.color = "white";
-        btn.style.touchAction = "none"; // previne scroll do navegador
+    function createButton(direction, row, col) {
 
-        // Eventos de toque
+        const btn = document.createElement("button");
+        btn.textContent = direction.replace("Arrow", "");
+
+        Object.assign(btn.style, {
+            gridRow: row,
+            gridColumn: col,
+            borderRadius: "50%",
+            border: "none",
+            background: "rgba(30,144,255,0.7)",
+            color: "white",
+            fontSize: "14px",
+            touchAction: "none"
+        });
+
         btn.addEventListener("touchstart", (e) => {
-            keys[dir] = true;
+            keys[direction] = true;
             e.preventDefault();
         });
+
         btn.addEventListener("touchend", (e) => {
-            keys[dir] = false;
+            keys[direction] = false;
             e.preventDefault();
         });
 
         container.appendChild(btn);
-    });
+    }
+
+    // Formato cruz
+    createButton("ArrowUp", 1, 2);
+    createButton("ArrowLeft", 2, 1);
+    createButton("ArrowRight", 2, 3);
+    createButton("ArrowDown", 3, 2);
 
     document.body.appendChild(container);
 }
+
 
 
 // chama essa função depois de inicializar o canvas
