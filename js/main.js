@@ -197,7 +197,7 @@ function spawnObstacle() {
         y: -50,
         width: 40,
         height: 40,
-        speed: 3,
+        speed: 1.5,
         image: obstacleImage
     });
 }
