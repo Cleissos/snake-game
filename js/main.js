@@ -42,7 +42,7 @@ const snake = {
     y: canvas.height + 200, // começa fora da tela
     width: 80,
     height: 80,
-    speed: 1.2,          // perseguição
+    speed: .8,          // perseguição
     emergeSpeed: 0.8,    // surgimento
     emerging: false
 };
