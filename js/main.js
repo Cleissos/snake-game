@@ -9,6 +9,13 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas(); // inicializa o tamanho correto
 
+let riverSpeed = 3;
+let riverAcceleration = 0.02;
+let maxRiverSpeed = 8;
+
+let enginePower = 0;
+let maxEnginePower = 6;
+let engineAcceleration = 0.2;
 
 
 const boatImage = new Image();
@@ -21,7 +28,8 @@ boatUpgradeImage.src = "assets/barquinho3 (2).png";
 
 // Obstáculos
 const obstacleImage = new Image();
-obstacleImage.src = "assets/tronco.png"; // ex.: tronco, pedra, etc.
+// obstacleImage.src = "assets/tronco.png";
+obstacleImage.src = "assets/murure.png";
 
 // Upgrade
 const upgradeImage = new Image();
@@ -58,7 +66,8 @@ const splashSound = new Audio("audio/Splash de Água 3.mp3");
 
 const player = {
     x: canvas.width / 2,
-    y: canvas.height - 100,
+    // y: canvas.height - 100,
+    y: canvas.height * 0.65,
     width: 40,
     height: 60,
 
@@ -214,24 +223,17 @@ function drawObstacles() {
     });
 }
 
-
 function loseLife() {
-
     lives--;
-
     player.velocityX *= 0.3;
     player.velocityY *= 0.3;
 
-    // Só ativa se ainda não estiver ativa
-    if (!snakeActive) {
-
+    // Ativa cobra apenas se ainda não estiver ativa
+    if (!snakeActive && !player.upgraded) {
         snakeActive = true;
         snake.emerging = true;
-
-        // Posicionar atrás do jogador
         snake.x = player.x;
         snake.y = canvas.height + 100;
-
         splashSound.currentTime = 0;
         splashSound.play();
         cameraShake = 20;
@@ -241,6 +243,7 @@ function loseLife() {
         gameState = "gameover";
     }
 }
+
 
 function drawLives() {
     const heartSize = 30; // tamanho do coração
@@ -279,61 +282,42 @@ function drawLives() {
 }
 
 function updateSnake() {
-
-    // 🎬 FASE DE SURGIMENTO
     if (snake.emerging) {
-
-        snake.y -= 4; // sobe da água
-
-        // Criar partículas grandes de água
-        for (let i = 0; i < 5; i++) {
-            particles.push({
-                x: snake.x + snake.width / 2,
-                y: snake.y + snake.height,
-                size: Math.random() * 8 + 4,
-                speedY: Math.random() * 3,
-                alpha: 1
-            });
-        }
-
-        // Quando chegar perto do jogador
-        if (snake.y < player.y + 150) {
-            snake.emerging = false;
-        }
-
-    } else {
-        // 🧠 IA NORMAL (agora está certo)
-
-        const dx = player.x - snake.x;
-        const dy = player.y - snake.y;
-
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 1) {
-            snake.x += (dx / distance) * snake.speed;
-            snake.y += (dy / distance) * snake.speed;
-        }
+        // Fase de surgimento
+        snake.y -= 4;
+        if (snake.y < player.y + 150) snake.emerging = false;
+        return;
     }
 
+    if (!snakeActive) return;
 
-    if (snakeActive && !snake.emerging) {
-        if (
-            player.x < snake.x + snake.width &&
-            player.x + player.width > snake.x &&
-            player.y < snake.y + snake.height &&
-            player.y + player.height > snake.y
-        ) {
-            if (!player.upgraded) {
-                gameState = "gameover";
-            } else {
-                // Cobra não mata, talvez some depois de algumas “marteladas”
-                // opcional: você pode adicionar um efeito de partículas ou recuo da cobra
-                snake.x -= 20; // recua
-            }
+    // IA da cobra
+    const dx = player.x - snake.x;
+    const dy = player.y - snake.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance > 1) {
+        snake.x += (dx / distance) * snake.speed;
+        snake.y += (dy / distance) * snake.speed;
+    }
 
+    // Colisão com jogador
+    if (
+        player.x < snake.x + snake.width &&
+        player.x + player.width > snake.x &&
+        player.y < snake.y + snake.height &&
+        player.y + player.height > snake.y
+    ) {
+        if (!player.upgraded) {
+            gameState = "gameover";
+        } else {
+            // Cobra some
+            snakeActive = false;
+            // Opcional: criar efeito de partículas de água
+            drawWaterExplosion(snake.x + snake.width / 2, snake.y + snake.height / 2);
         }
     }
 }
+
 
 function drawGameOver() {
     ctx.fillStyle = "black";
@@ -393,6 +377,7 @@ function gameLoop() {
 
 function update() {
     if (gameState === "playing") {
+        createBoatWaves();
         updatePlayer();
         updateSnake();
         updateObstacles();
@@ -414,8 +399,8 @@ function updateUpgrades() {
         ) {
             player.upgraded = true;
             player.upgradeTimer = 600; // duração do upgrade, ex: 600 frames = 10 segundos se rodando 60fps
-            player.width = 80;  // aumenta tamanho
-            player.height = 120;
+            player.width = 40;  // aumenta tamanho
+            player.height = 80;
 
             upgrades.splice(index, 1);
         }
@@ -505,6 +490,7 @@ function drawGame() {
     // ================================
     drawLives();
 
+
     // ================================
     // 4️⃣ Desenhar cobra se estiver ativa
     // ================================
@@ -512,48 +498,28 @@ function drawGame() {
         drawSnake();
     }
 
-    // ================================
-    // 5️⃣ Desenhar jogador
-    // ================================
-    if (player.upgraded) {
-        // 🚤 Barco com upgrade
-        ctx.drawImage(
-            boatUpgradeImage,
-            player.x,
-            player.y,
-            player.width,
-            player.height
-        );
-    } else {
-        // 🚤 Barco normal
-        ctx.drawImage(
-            boatImage,
-            player.x,
-            player.y,
-            player.width,
-            player.height
-        );
-    }
+    drawPlayer();
 
     // ================================
     // 6️⃣ Desenhar partículas de água
     // ================================
     drawWaterTrail();
 
-    // ================================
-    // 7️⃣ Opcional: efeitos adicionais
-    // ================================
-    // ex.: partículas de turbo, faíscas, etc.
 }
-
-
-
 
 // =============================
 // PLAYER
 // =============================
 
 function updatePlayer() {
+
+    // =========================
+    // VELOCIDADE DO RIO
+    // =========================
+    player.y += riverSpeed * 0.5;
+
+    // Motor empurra para cima
+    player.y -= enginePower;
 
     // =========================
     // MOVIMENTO HORIZONTAL
@@ -572,15 +538,18 @@ function updatePlayer() {
     // =========================
 
     if (keys["ArrowUp"]) {
-        player.velocityY -= player.forwardAcceleration;
         player.boosting = true;
-    }
-    else if (keys["ArrowDown"]) {
-        player.velocityY += player.forwardAcceleration;
+
+        enginePower += engineAcceleration;
+        if (enginePower > maxEnginePower) {
+            enginePower = maxEnginePower;
+        }
+
+    } else {
         player.boosting = false;
-    }
-    else {
-        player.boosting = false;
+
+        enginePower -= 0.1; // perde força aos poucos
+        if (enginePower < 0) enginePower = 0;
     }
 
     // =========================
@@ -632,8 +601,6 @@ function updatePlayer() {
         player.x = canvas.width - player.width;
 
     if (player.y < 0) player.y = 0;
-    if (player.y + player.height > canvas.height)
-        player.y = canvas.height - player.height;
 
     // =========================
     // PARTÍCULAS DE ÁGUA
@@ -656,45 +623,62 @@ function updatePlayer() {
             particles.shift();
         }
     }
+
+    createSideWaves();
+
+    if (player.y > canvas.height) {
+        gameState = "gameover";
+    }
+
 }
 
 function drawPlayer() {
 
-    // 🔥 Sombra
-    ctx.fillStyle = "rgba(0,0,0,0.3)";
-    ctx.beginPath();
-    ctx.ellipse(
-        player.x + player.width / 2,
-        player.y + player.height + 8,
-        player.width / 2,
-        10,
-        0,
-        0,
-        Math.PI * 2
-    );
-    ctx.fill();
+    const imageToDraw = player.upgraded ? boatUpgradeImage : boatImage;
 
-    // 🔥 Efeito visual de turbo
-    if (player.boosting) {
-        ctx.fillStyle = "orange";
-        ctx.beginPath();
-        ctx.moveTo(player.x + player.width / 2 - 5, player.y + player.height);
-        ctx.lineTo(player.x + player.width / 2 + 5, player.y + player.height);
-        ctx.lineTo(player.x + player.width / 2, player.y + player.height + 20);
-        ctx.closePath();
-        ctx.fill();
-    }
-
-
-    // 🚤 Sprite
     ctx.drawImage(
-        boatImage,
+        imageToDraw,
         player.x,
         player.y,
         player.width,
         player.height
     );
 }
+
+
+function createSideWaves() {
+
+    const wavePower = player.upgraded ? 2 : 1;
+
+    const speedIntensity = Math.abs(player.velocityX) + Math.abs(player.velocityY);
+
+    if (speedIntensity > 0.5) {
+
+        for (let i = 0; i < wavePower; i++) {
+
+            // Lado esquerdo
+            particles.push({
+                x: player.x - 5,
+                y: player.y + player.height / 2,
+                size: Math.random() * 4 + 2 * wavePower,
+                speedY: Math.random() * 1.5,
+                alpha: 1,
+                drift: - (Math.random() * 2 + 1) * wavePower
+            });
+
+            // Lado direito
+            particles.push({
+                x: player.x + player.width + 5,
+                y: player.y + player.height / 2,
+                size: Math.random() * 4 + 2 * wavePower,
+                speedY: Math.random() * 1.5,
+                alpha: 1,
+                drift: (Math.random() * 2 + 1) * wavePower
+            });
+        }
+    }
+}
+
 
 function drawRiver() {
 
@@ -707,24 +691,57 @@ function drawRiver() {
 
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    drawWaterTrail();
     drawWaterReflection();
 }
 
+
 function drawWaterReflection() {
-    // reflexo simples do barco na água
+
+    const imageToDraw = player.upgraded ? boatUpgradeImage : boatImage;
+
     ctx.save();
-    ctx.globalAlpha = 0.2;
-    ctx.scale(1, -1); // inverte verticalmente
+    ctx.globalAlpha = 0.15;
+
+    ctx.translate(player.x + player.width / 2, player.y + player.height + 10);
+    ctx.scale(1, -1);
+
     ctx.drawImage(
-        boatImage,
-        player.x,
-        -player.y - player.height * 2, // espelhamento
+        imageToDraw,
+        -player.width / 2,
+        0,
         player.width,
         player.height
     );
+
     ctx.restore();
 }
+
+function createBoatWaves() {
+
+    const waveSize = player.upgraded ? 4 : 2;
+    const spread = player.upgraded ? 25 : 15;
+
+    for (let i = 0; i < 2; i++) {
+
+        particles.push({
+            x: player.x + Math.random() * player.width,
+            y: player.y + player.height - 5,
+            size: Math.random() * waveSize + 1,
+            speedY: Math.random() * 1 + 0.5,
+            alpha: 0.5
+        });
+
+        // laterais
+        particles.push({
+            x: player.x - spread + Math.random() * (player.width + spread * 2),
+            y: player.y + player.height / 2,
+            size: Math.random() * waveSize,
+            speedY: Math.random() * 0.5,
+            alpha: 0.4
+        });
+    }
+}
+
 
 
 function drawWaterWaves() {
@@ -748,14 +765,11 @@ function drawWaterWaves() {
     }
 }
 
-
 function drawWaterTrail() {
 
     particles.forEach((p, index) => {
 
         p.y += p.speedY;
-
-        // Se drift existir, usa. Senão, usa 0.
         p.x += p.drift || 0;
 
         p.alpha -= 0.02;
@@ -770,6 +784,7 @@ function drawWaterTrail() {
         }
     });
 }
+
 
 function startGame() {
     gameState = "playing";
@@ -804,24 +819,6 @@ document.addEventListener("keyup", (e) => {
     keys[e.key] = false;
 });
 
-// Início do jogo no menu
-// canvas.addEventListener("touchstart", (e) => {
-//     if (gameState === "menu") {
-//         startGame();
-//         return; // não processa direção ainda
-//     }
-
-//     const touch = e.touches[0];
-//     const rect = canvas.getBoundingClientRect();
-//     const x = touch.clientX - rect.left;
-//     const y = touch.clientY - rect.top;
-
-//     if (x < canvas.width / 2) keys["ArrowLeft"] = true;
-//     else keys["ArrowRight"] = true;
-
-//     if (y < canvas.height / 2) keys["ArrowUp"] = true;
-//     else keys["ArrowDown"] = true;
-// });
 
 // toque geral para iniciar o jogo
 canvas.addEventListener("touchstart", (e) => {
@@ -833,39 +830,6 @@ canvas.addEventListener("touchstart", (e) => {
 });
 
 
-// function createMobileControls() {
-//     const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
-//     const labels = ["⬅️", "➡️", "⬆️", "⬇️"];
-//     const positions = [
-//         { left: "5%", bottom: "10%" },
-//         { left: "20%", bottom: "10%" },
-//         { left: "80%", bottom: "20%" },
-//         { left: "80%", bottom: "5%" }
-//     ];
-
-//     directions.forEach((key, i) => {
-//         const btn = document.createElement("button");
-//         btn.innerText = labels[i];
-//         btn.style.position = "fixed";
-//         btn.style.left = positions[i].left;
-//         btn.style.bottom = positions[i].bottom;
-//         btn.style.width = "60px";
-//         btn.style.height = "60px";
-//         btn.style.fontSize = "30px";
-//         btn.style.borderRadius = "10px";
-//         btn.style.background = "rgba(30,144,255,0.7)";
-//         btn.style.color = "white";
-//         btn.style.border = "none";
-//         btn.style.zIndex = 1000;
-
-//         // Pressionar → marca tecla como true
-//         btn.addEventListener("touchstart", () => keys[key] = true);
-//         // Soltar → marca tecla como false
-//         btn.addEventListener("touchend", () => keys[key] = false);
-
-//         document.body.appendChild(btn);
-//     });
-// }
 
 function createMobileControls() {
     // Verifica se já existem
@@ -876,7 +840,7 @@ function createMobileControls() {
 
     const container = document.createElement("div");
     container.id = "mobileControls";
-    
+
     // Estilo do container
     Object.assign(container.style, {
         position: "fixed",
