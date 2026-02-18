@@ -243,6 +243,9 @@ function drawObstacles() {
 
 function loseLife() {
     lives--;
+
+    // 🔥 TREMER TELA
+    cameraShake = 15; // intensidade
     player.velocityX *= 0.3;
     player.velocityY *= 0.3;
 
