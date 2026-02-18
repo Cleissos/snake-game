@@ -98,19 +98,38 @@ const player = {
     upgradeTimer: 0,   // duração do upgrade em frames
 };
 
+// function resizeCanvas() {
+//     canvas.width = window.innerWidth;
+//     canvas.height = window.innerHeight;
+
+//     // Reposiciona o barco um pouco abaixo do meio
+//     player.x = canvas.width / 2 - player.width / 2;
+//     player.y = canvas.height * 0.6; // 👈 60% da altura
+// }
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = window.visualViewport
+        ? window.visualViewport.height
+        : window.innerHeight;
 
-    // Reposiciona o barco um pouco abaixo do meio
     player.x = canvas.width / 2 - player.width / 2;
-    player.y = canvas.height * 0.6; // 👈 60% da altura
+    player.y = canvas.height * 0.6;
 }
+
 
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("orientationchange", resizeCanvas);
 
-resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
+
+window.addEventListener("load", () => {
+    setTimeout(() => {
+        resizeCanvas();
+    }, 100); // pequeno delay para o mobile calcular a viewport correta
+});
+
 
 let upgrades = [];
 
@@ -225,8 +244,6 @@ function updateObstacles() {
             } else {
                 obstacles.splice(index, 1);
             }
-
-            // loseLife();
         }
 
     });
@@ -301,19 +318,11 @@ function drawLives() {
 }
 
 function updateSnake() {
-    // if (snake.emerging) {
-    //     // Fase de surgimento
-    //     snake.y -= 4;
-    //     if (snake.y < player.y + 150) snake.emerging = false;
-    //     return;
-    // }
-
     if (snake.emerging) {
         snake.y -= snake.emergeSpeed;
         if (snake.y < player.y + 150) snake.emerging = false;
         return;
     }
-
 
     if (!snakeActive) return;
 
