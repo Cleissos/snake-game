@@ -10,7 +10,7 @@ let maxEnginePower = 6;
 let engineAcceleration = 0.2;
 
 //Áudio global do motor do barco
-const engineSound = new Audio("audio/motor.mp3");
+const engineSound = new Audio("audio/audio1.mp3");
 engineSound.loop = true;
 engineSound.volume = 0;
 
