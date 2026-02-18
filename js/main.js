@@ -14,8 +14,6 @@ const engineSound = new Audio("audio/audio1.mp3");
 engineSound.loop = true;
 engineSound.volume = 0;
 
-
-
 const boatImage = new Image();
 boatImage.src = "assets/boat.png";
 const snakeImage = new Image();
@@ -548,20 +546,6 @@ function updatePlayer() {
     // Motor empurra para cima
     player.y -= enginePower;
 
-    // 🎧 Controle do som do motor
-    if (enginePower > 0) {
-        if (engineSound.paused) {
-            engineSound.play();
-        }
-
-        // Volume proporcional à força do motor
-        engineSound.volume = enginePower / maxEnginePower;
-    } else {
-        engineSound.pause();
-        engineSound.currentTime = 0;
-    }
-
-
     // =========================
     // MOVIMENTO HORIZONTAL
     // =========================
@@ -591,6 +575,19 @@ function updatePlayer() {
 
         enginePower -= 0.1; // perde força aos poucos
         if (enginePower < 0) enginePower = 0;
+    }
+
+    // 🎧 Controle do som do motor
+    if (enginePower > 0) {
+        if (engineSound.paused) {
+            engineSound.play();
+        }
+
+        // Volume proporcional à força do motor
+        engineSound.volume = enginePower / maxEnginePower;
+    } else {
+        engineSound.pause();
+        engineSound.currentTime = 0;
     }
 
     // =========================
@@ -857,6 +854,8 @@ function startGame() {
     engineSound.play().then(() => {
         engineSound.pause();
     });
+
+    engineSound.muted = false;
 
 }
 
