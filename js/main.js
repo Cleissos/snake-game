@@ -175,8 +175,6 @@ if (controls && window.innerWidth <= 900) {
 
 }
 
-
-
 function spawnObstacle() {
     obstacles.push({
         x: Math.random() * (canvas.width - 40),
@@ -814,6 +812,20 @@ function startGame() {
     obstacles = [];
     particles = [];
 }
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Reposiciona o barco um pouco abaixo do meio
+    player.x = canvas.width / 2 - player.width / 2;
+    player.y = canvas.height * 0.6; // 👈 60% da altura
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+
 
 
 // =============================
