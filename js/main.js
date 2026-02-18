@@ -96,7 +96,7 @@ const player = {
     upgraded: false,
     upgradeTimer: 0,   // duração do upgrade em frames
 };
-resizeCanvas();
+// resizeCanvas();
 
 let upgrades = [];
 
