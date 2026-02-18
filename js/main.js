@@ -9,6 +9,12 @@ let enginePower = 0;
 let maxEnginePower = 6;
 let engineAcceleration = 0.2;
 
+//Áudio global do motor do barco
+const engineSound = new Audio("audio/motor.mp3");
+engineSound.loop = true;
+engineSound.volume = 0;
+
+
 
 const boatImage = new Image();
 boatImage.src = "assets/boat.png";
@@ -373,15 +379,15 @@ function drawSnake() {
     }
 
     // 💀 OLHOS SEMPRE VERMELHOS
-ctx.fillStyle = "red";
+    ctx.fillStyle = "red";
 
-ctx.beginPath();
-ctx.arc(snake.x + 20, snake.y + 15, 6, 0, Math.PI * 2);
-ctx.fill();
+    ctx.beginPath();
+    ctx.arc(snake.x + 20, snake.y + 15, 6, 0, Math.PI * 2);
+    ctx.fill();
 
-ctx.beginPath();
-ctx.arc(snake.x + 45, snake.y + 15, 6, 0, Math.PI * 2);
-ctx.fill();
+    ctx.beginPath();
+    ctx.arc(snake.x + 45, snake.y + 15, 6, 0, Math.PI * 2);
+    ctx.fill();
 
 }
 
@@ -542,6 +548,20 @@ function updatePlayer() {
     // Motor empurra para cima
     player.y -= enginePower;
 
+    // 🎧 Controle do som do motor
+    if (enginePower > 0) {
+        if (engineSound.paused) {
+            engineSound.play();
+        }
+
+        // Volume proporcional à força do motor
+        engineSound.volume = enginePower / maxEnginePower;
+    } else {
+        engineSound.pause();
+        engineSound.currentTime = 0;
+    }
+
+
     // =========================
     // MOVIMENTO HORIZONTAL
     // =========================
@@ -643,6 +663,8 @@ function updatePlayer() {
         if (particles.length > 100) {
             particles.shift();
         }
+
+
     }
 
     createSideWaves();
@@ -831,6 +853,11 @@ function startGame() {
 
     obstacles = [];
     particles = [];
+
+    engineSound.play().then(() => {
+        engineSound.pause();
+    });
+
 }
 
 
