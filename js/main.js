@@ -42,7 +42,7 @@ const snake = {
     y: canvas.height + 200, // começa fora da tela
     width: 80,
     height: 80,
-    speed: 5,          // perseguição
+    speed: 2,          // perseguição
     emergeSpeed: 0.8,    // surgimento
     emerging: false
 };
@@ -373,16 +373,28 @@ function drawSnake() {
     }
 
     // 💀 Olhos brilhando
-    if (snake.emerging) {
-        ctx.fillStyle = "red";
-        ctx.beginPath();
-        ctx.arc(snake.x + 20, snake.y + 15, 5, 0, Math.PI * 2);
-        ctx.fill();
+    // if (snake.emerging) {
+    //     ctx.fillStyle = "red";
+    //     ctx.beginPath();
+    //     ctx.arc(snake.x + 20, snake.y + 15, 5, 0, Math.PI * 2);
+    //     ctx.fill();
 
-        ctx.beginPath();
-        ctx.arc(snake.x + 45, snake.y + 15, 5, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    //     ctx.beginPath();
+    //     ctx.arc(snake.x + 45, snake.y + 15, 5, 0, Math.PI * 2);
+    //     ctx.fill();
+    // }
+
+    // 💀 OLHOS SEMPRE VERMELHOS
+ctx.fillStyle = "red";
+
+ctx.beginPath();
+ctx.arc(snake.x + 20, snake.y + 15, 6, 0, Math.PI * 2);
+ctx.fill();
+
+ctx.beginPath();
+ctx.arc(snake.x + 45, snake.y + 15, 6, 0, Math.PI * 2);
+ctx.fill();
+
 }
 
 
