@@ -98,15 +98,6 @@ const player = {
     upgradeTimer: 0,   // duração do upgrade em frames
 };
 
-// function resizeCanvas() {
-//     canvas.width = window.innerWidth;
-//     canvas.height = window.innerHeight;
-
-//     // Reposiciona o barco um pouco abaixo do meio
-//     player.x = canvas.width / 2 - player.width / 2;
-//     player.y = canvas.height * 0.6; // 👈 60% da altura
-// }
-
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.visualViewport
@@ -127,7 +118,8 @@ window.addEventListener("orientationchange", resizeCanvas);
 window.addEventListener("load", () => {
     setTimeout(() => {
         resizeCanvas();
-    }, 100); // pequeno delay para o mobile calcular a viewport correta
+        updateMobileControls();
+    }, 200); // pequeno delay para o mobile calcular a viewport correta
 });
 
 
@@ -664,6 +656,8 @@ function updatePlayer() {
 
     if (player.y > canvas.height) {
         gameState = "gameover";
+        updateMobileControls();
+
     }
 
 }
@@ -824,6 +818,8 @@ function drawWaterTrail() {
 
 function startGame() {
     gameState = "playing";
+    resizeCanvas();
+    updateMobileControls(); // 👈 ESSENCIAL
     lives = 3;
     snakeActive = false;
     snake.emerging = false;
@@ -864,56 +860,6 @@ canvas.addEventListener("touchstart", (e) => {
     }
 });
 
-
-
-// function createMobileControls() {
-//     // Verifica se já existem
-//     if (document.getElementById("mobileControls")) return;
-
-//     // Só ativa para telas menores (tablet/celular)
-//     if (window.innerWidth > 900) return;
-
-//     const container = document.createElement("div");
-//     container.id = "mobileControls";
-
-//     // Estilo do container
-//     Object.assign(container.style, {
-//         position: "fixed",
-//         bottom: "20px",
-//         left: "50%",
-//         transform: "translateX(-50%)",
-//         display: "flex",
-//         gap: "10px",
-//         zIndex: 1000,
-//     });
-
-//     const directions = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
-//     directions.forEach(dir => {
-//         const btn = document.createElement("button");
-//         btn.textContent = dir.replace("Arrow", ""); // só mostra Left, Right, Up, Down
-//         btn.style.padding = "20px 25px";
-//         btn.style.fontSize = "16px";
-//         btn.style.borderRadius = "10px";
-//         btn.style.border = "none";
-//         btn.style.background = "#1e90ff";
-//         btn.style.color = "white";
-//         btn.style.touchAction = "none"; // previne scroll do navegador
-
-//         // Eventos de toque
-//         btn.addEventListener("touchstart", (e) => {
-//             keys[dir] = true;
-//             e.preventDefault();
-//         });
-//         btn.addEventListener("touchend", (e) => {
-//             keys[dir] = false;
-//             e.preventDefault();
-//         });
-
-//         container.appendChild(btn);
-//     });
-
-//     document.body.appendChild(container);
-// }
 
 function createMobileControls() {
 
@@ -992,6 +938,19 @@ window.addEventListener("resize", () => {
     }
 });
 
+function updateMobileControls() {
+
+    const isMobile = window.innerWidth <= 1024;
+
+    const controls = document.getElementById("mobileControls");
+
+    if (!isMobile || gameState !== "playing") {
+        controls.style.display = "none";
+        return;
+    }
+
+    controls.style.display = "flex";
+}
 
 
 // Para soltar a tecla quando tira o dedo
