@@ -1,13 +1,13 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
+// function resizeCanvas() {
+//     canvas.width = window.innerWidth;
+//     canvas.height = window.innerHeight;
+// }
 
-window.addEventListener("resize", resizeCanvas);
-resizeCanvas(); // inicializa o tamanho correto
+// window.addEventListener("resize", resizeCanvas);
+// resizeCanvas(); // inicializa o tamanho correto
 
 let riverSpeed = 3;
 let riverAcceleration = 0.02;
@@ -96,7 +96,20 @@ const player = {
     upgraded: false,
     upgradeTimer: 0,   // duração do upgrade em frames
 };
-// resizeCanvas();
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Reposiciona o barco um pouco abaixo do meio
+    player.x = canvas.width / 2 - player.width / 2;
+    player.y = canvas.height * 0.6; // 👈 60% da altura
+}
+
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
+
+resizeCanvas();
 
 let upgrades = [];
 
@@ -170,9 +183,9 @@ function restartGame() {
     particles = [];
 
     const controls = document.getElementById("mobileControls");
-if (controls && window.innerWidth <= 900) {
-    controls.style.display = "grid";
-}
+    if (controls && window.innerWidth <= 900) {
+        controls.style.display = "grid";
+    }
 
 }
 
@@ -331,7 +344,7 @@ function drawGameOver() {
     ctx.fillStyle = "red";
     ctx.font = "50px Arial";
     // ctx.fillText("GAME OVER", 250, 300);
-    ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
+    ctx.fillText("GAME OVER", canvas.width / 2 - 150, canvas.height / 2);
 
     // Mostrar botão
     // if (!document.getElementById("restartButton")) {
@@ -813,22 +826,6 @@ function startGame() {
     obstacles = [];
     particles = [];
 }
-
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    // Reposiciona o barco um pouco abaixo do meio
-    player.x = canvas.width / 2 - player.width / 2;
-    player.y = canvas.height * 0.6; // 👈 60% da altura
-}
-
-window.addEventListener("resize", resizeCanvas);
-
-
-
-
-
 
 // =============================
 // TECLADO
