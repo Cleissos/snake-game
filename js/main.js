@@ -1,6 +1,11 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+let riverWidth = canvas.width * 0.5; // 50% da tela
+let riverX = canvas.width / 2 - riverWidth / 2;
+let landOffset = 0;
+
+
 let riverSpeed = 1.5;
 let riverAcceleration = 0.02;
 let maxRiverSpeed = 8;
@@ -102,6 +107,10 @@ function resizeCanvas() {
 
     player.x = canvas.width / 2 - player.width / 2;
     player.y = canvas.height * 0.6;
+
+    riverWidth = canvas.width * 0.5;
+    riverX = canvas.width / 2 - riverWidth / 2;
+
 }
 
 window.addEventListener("resize", () => {
@@ -121,7 +130,8 @@ let upgrades = [];
 
 function spawnUpgrade() {
     upgrades.push({
-        x: Math.random() * (canvas.width - 40),
+        // x: Math.random() * (canvas.width - 40),
+        x: riverX + Math.random() * (riverWidth - 40),
         y: -50,
         width: 40,
         height: 40,
@@ -195,9 +205,24 @@ function restartGame() {
 
 }
 
+function unlockAudio() {
+    engineSound.volume = 0;
+
+    engineSound.play()
+        .then(() => {
+            engineSound.pause();
+            engineSound.currentTime = 0;
+        })
+        .catch(() => { });
+}
+
+
+
 function spawnObstacle() {
     obstacles.push({
-        x: Math.random() * (canvas.width - 40),
+        // x: Math.random() * (canvas.width - 40),
+        x: riverX + Math.random() * (riverWidth - 40),
+
         y: -50,
         width: 40,
         height: 40,
@@ -402,6 +427,8 @@ function gameLoop() {
 
 function update() {
     if (gameState === "playing") {
+        landOffset += riverSpeed;
+
         createBoatWaves();
         updatePlayer();
         updateSnake();
@@ -489,13 +516,17 @@ function drawWaterExplosion(x, y) {
 }
 
 function drawMenu() {
-    ctx.fillStyle = "white";
-    ctx.font = "40px Arial";
-    ctx.fillText("RIVER RACE", 280, 250);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.font = "20px Arial";
-    ctx.fillText("Pressione ENTER para começar", 250, 300);
+    ctx.fillStyle = "white";
+    ctx.font = "bold 40px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 40);
+    ctx.fillText("Pressione ENTER", canvas.width / 2, canvas.height / 2 + 20);
 }
+
 
 function drawGame() {
     // ================================
@@ -538,6 +569,8 @@ function drawGame() {
 
 function updatePlayer() {
 
+    
+
     // =========================
     // VELOCIDADE DO RIO
     // =========================
@@ -578,17 +611,23 @@ function updatePlayer() {
     }
 
     // 🎧 Controle do som do motor
-    if (enginePower > 0) {
+    if (enginePower > 0 && gameState === "playing") {
+
         if (engineSound.paused) {
-            engineSound.play();
+            engineSound.play().catch(() => { });
         }
 
-        // Volume proporcional à força do motor
         engineSound.volume = enginePower / maxEnginePower;
+
     } else {
-        engineSound.pause();
-        engineSound.currentTime = 0;
+
+        if (!engineSound.paused) {
+            engineSound.pause();
+            engineSound.currentTime = 0;
+        }
+
     }
+
 
     // =========================
     // TURBO
@@ -634,9 +673,12 @@ function updatePlayer() {
     // LIMITES DA TELA
     // =========================
 
-    if (player.x < 0) player.x = 0;
-    if (player.x + player.width > canvas.width)
-        player.x = canvas.width - player.width;
+    if (player.x < riverX)
+        player.x = riverX;
+
+    if (player.x + player.width > riverX + riverWidth)
+        player.x = riverX + riverWidth - player.width;
+
 
     if (player.y < 0) player.y = 0;
 
@@ -667,12 +709,22 @@ function updatePlayer() {
     createSideWaves();
 
     if (player.y > canvas.height) {
-        gameState = "gameover";
+        // gameState = "gameover";
+        endGame();
         updateMobileControls();
 
     }
 
 }
+
+function endGame() {
+    gameState = "gameover";
+
+    enginePower = 0;
+    engineSound.pause();
+    engineSound.currentTime = 0;
+}
+
 
 function drawPlayer() {
 
@@ -724,6 +776,38 @@ function createSideWaves() {
 
 function drawRiver() {
 
+    // 🌳 LADO ESQUERDO (terra)
+    ctx.fillStyle = "#2e8b57";
+    ctx.fillRect(0, 0, riverX, canvas.height);
+
+    // 🌳 LADO DIREITO (terra)
+    ctx.fillRect(
+        riverX + riverWidth,
+        0,
+        canvas.width - (riverX + riverWidth),
+        canvas.height
+    );
+
+    // 🌲 Árvores animadas
+    for (let i = 0; i < canvas.height; i += 120) {
+
+        const treeY =
+            (i + landOffset) % (canvas.height + 120) - 60;
+
+        // esquerda
+        drawTree(
+            riverX / 2,
+            treeY
+        );
+
+        // direita
+        drawTree(
+            riverX + riverWidth +
+            (canvas.width - (riverX + riverWidth)) / 2,
+            treeY
+        );
+    }
+
     // 🎨 Gradiente de água
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
 
@@ -732,10 +816,22 @@ function drawRiver() {
     gradient.addColorStop(1, "#0f3057");   // fundo escuro
 
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(riverX, 0, riverWidth, canvas.height);
     drawWaterReflection();
 }
 
+function drawTree(x, y) {
+
+    // Tronco
+    ctx.fillStyle = "#8B4513";
+    ctx.fillRect(x - 5, y + 20, 10, 20);
+
+    // Copa
+    ctx.fillStyle = "#228B22";
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+}
 
 function drawWaterReflection() {
 
@@ -851,11 +947,10 @@ function startGame() {
     obstacles = [];
     particles = [];
 
-    engineSound.play().then(() => {
-        engineSound.pause();
-    });
+    enginePower = 0;
+    engineSound.pause();
+    engineSound.currentTime = 0;
 
-    engineSound.muted = false;
 
 }
 
@@ -867,8 +962,10 @@ document.addEventListener("keydown", (e) => {
     keys[e.key] = true;
 
     if (gameState === "menu" && e.key === "Enter") {
-        gameState = "playing";
+        unlockAudio();
+        startGame();
     }
+
 });
 
 document.addEventListener("keyup", (e) => {
@@ -876,14 +973,15 @@ document.addEventListener("keyup", (e) => {
 });
 
 
-// toque geral para iniciar o jogo
 canvas.addEventListener("touchstart", (e) => {
     if (gameState === "menu") {
+        unlockAudio();
         startGame();
-        e.preventDefault(); // evita rolagem da tela
+        e.preventDefault();
         return;
     }
 });
+
 
 
 function createMobileControls() {
