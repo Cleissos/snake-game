@@ -5,6 +5,24 @@ let riverWidth = canvas.width * 0.5; // 50% da tela
 let riverX = canvas.width / 2 - riverWidth / 2;
 let landOffset = 0;
 
+const landLeftImage = new Image();
+landLeftImage.src = "assets/terra_left.png";
+
+const landRightImage = new Image();
+landRightImage.src = "assets/terra_right.png";
+
+
+const snakeSprites = {
+    down: [],
+    up: [],
+    left: [],
+    right: []
+};
+
+let currentDirection = "down";
+let currentFrame = 0;
+let frameTimer = 0;
+let frameInterval = 150; // velocidade da animação (ms)
 
 let riverSpeed = 1.5;
 let riverAcceleration = 0.02;
@@ -53,19 +71,17 @@ const snake = {
     height: 80,
     speed: 1.5,          // perseguição
     emergeSpeed: 0.8,    // surgimento
-    emerging: false
+    emerging: false,
+    direction: "down" // direção inicial
 };
 
-let lives = 3;
 let snakeActive = false;
 
 let obstacles = [];
 let cameraShake = 0;
 const splashSound = new Audio("audio/Splash de Água 3.mp3");
 
-
 // 🎮 Jogador
-
 const player = {
     x: canvas.width / 2,
     // y: canvas.height - 100,
@@ -97,6 +113,10 @@ const player = {
     // NOVO: upgrade
     upgraded: false,
     upgradeTimer: 0,   // duração do upgrade em frames
+
+    angle: 0,
+    targetAngle: 0,
+    rotationSpeed: 0.15,
 };
 
 function resizeCanvas() {
@@ -112,6 +132,7 @@ function resizeCanvas() {
     riverX = canvas.width / 2 - riverWidth / 2;
 
 }
+
 
 window.addEventListener("resize", () => {
     resizeCanvas();
@@ -175,7 +196,99 @@ function showRestartButton() {
 
     document.body.appendChild(button);
 }
+let lives = 3;
 
+function drawLives() {
+    const heartSize = 30; // tamanho do coração
+    const padding = 10;   // distância entre eles
+
+    for (let i = 0; i < lives; i++) {
+        ctx.fillStyle = "red";
+        ctx.beginPath();
+        const x = padding + i * (heartSize + padding);
+        const y = 20;
+
+        // forma simples de coração usando curvas
+        ctx.moveTo(x + heartSize / 2, y + heartSize / 4);
+        ctx.bezierCurveTo(
+            x + heartSize / 2, y,
+            x, y,
+            x, y + heartSize / 4
+        );
+        ctx.bezierCurveTo(
+            x, y + heartSize / 2,
+            x + heartSize / 2, y + heartSize * 0.75,
+            x + heartSize / 2, y + heartSize
+        );
+        ctx.bezierCurveTo(
+            x + heartSize / 2, y + heartSize * 0.75,
+            x + heartSize, y + heartSize / 2,
+            x + heartSize, y + heartSize / 4
+        );
+        ctx.bezierCurveTo(
+            x + heartSize, y,
+            x + heartSize / 2, y,
+            x + heartSize / 2, y + heartSize / 4
+        );
+        ctx.fill();
+    }
+}
+
+function startGame() {
+
+    gameState = "playing";
+
+    resizeCanvas();
+
+    createMobileControls();   // garante que existe
+    updateMobileControls();   // posiciona corretamente
+
+    lives = 3;
+    snakeActive = false;
+    snake.emerging = false;
+
+    snake.x = canvas.width / 2;
+    snake.y = canvas.height + 200;
+
+    player.x = canvas.width / 2 - player.width / 2;
+    player.y = canvas.height * 0.6;
+
+    player.velocityX = 0;
+    player.velocityY = 0;
+
+    obstacles = [];
+    particles = [];
+
+    enginePower = 0;
+    engineSound.pause();
+    engineSound.currentTime = 0;
+
+
+}
+
+function loseLife() {
+    lives--;
+
+    // 🔥 TREMER TELA
+    cameraShake = 15; // intensidade
+    player.velocityX *= 0.3;
+    player.velocityY *= 0.3;
+
+    // Ativa cobra apenas se ainda não estiver ativa
+    if (!snakeActive && !player.upgraded) {
+        snakeActive = true;
+        snake.emerging = true;
+        snake.x = player.x;
+        snake.y = canvas.height + 100;
+        splashSound.currentTime = 0;
+        splashSound.play();
+        cameraShake = 20;
+    }
+
+    if (lives <= 0) {
+        gameState = "gameover";
+    }
+}
 
 function restartGame() {
     // Remover botão
@@ -216,11 +329,8 @@ function unlockAudio() {
         .catch(() => { });
 }
 
-
-
 function spawnObstacle() {
     obstacles.push({
-        // x: Math.random() * (canvas.width - 40),
         x: riverX + Math.random() * (riverWidth - 40),
 
         y: -50,
@@ -270,86 +380,47 @@ function drawObstacles() {
     });
 }
 
-function loseLife() {
-    lives--;
+function updateSnake(deltaTime) {
 
-    // 🔥 TREMER TELA
-    cameraShake = 15; // intensidade
-    player.velocityX *= 0.3;
-    player.velocityY *= 0.3;
-
-    // Ativa cobra apenas se ainda não estiver ativa
-    if (!snakeActive && !player.upgraded) {
-        snakeActive = true;
-        snake.emerging = true;
-        snake.x = player.x;
-        snake.y = canvas.height + 100;
-        splashSound.currentTime = 0;
-        splashSound.play();
-        cameraShake = 20;
-    }
-
-    if (lives <= 0) {
-        gameState = "gameover";
-    }
-}
-
-
-function drawLives() {
-    const heartSize = 30; // tamanho do coração
-    const padding = 10;   // distância entre eles
-
-    for (let i = 0; i < lives; i++) {
-        ctx.fillStyle = "red";
-        ctx.beginPath();
-        const x = padding + i * (heartSize + padding);
-        const y = 20;
-
-        // forma simples de coração usando curvas
-        ctx.moveTo(x + heartSize / 2, y + heartSize / 4);
-        ctx.bezierCurveTo(
-            x + heartSize / 2, y,
-            x, y,
-            x, y + heartSize / 4
-        );
-        ctx.bezierCurveTo(
-            x, y + heartSize / 2,
-            x + heartSize / 2, y + heartSize * 0.75,
-            x + heartSize / 2, y + heartSize
-        );
-        ctx.bezierCurveTo(
-            x + heartSize / 2, y + heartSize * 0.75,
-            x + heartSize, y + heartSize / 2,
-            x + heartSize, y + heartSize / 4
-        );
-        ctx.bezierCurveTo(
-            x + heartSize, y,
-            x + heartSize / 2, y,
-            x + heartSize / 2, y + heartSize / 4
-        );
-        ctx.fill();
-    }
-}
-
-function updateSnake() {
-    if (snake.emerging) {
-        snake.y -= snake.emergeSpeed;
-        if (snake.y < player.y + 150) snake.emerging = false;
-        return;
-    }
 
     if (!snakeActive) return;
 
-    // IA da cobra
+    // ========================
+    // IA DE PERSEGUIÇÃO
+    // ========================
     const dx = player.x - snake.x;
     const dy = player.y - snake.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
+
     if (distance > 1) {
         snake.x += (dx / distance) * snake.speed;
         snake.y += (dy / distance) * snake.speed;
+
+        // Define direção
+        if (Math.abs(dx) > Math.abs(dy)) {
+            currentDirection = dx > 0 ? "right" : "left";
+        } else {
+            currentDirection = dy > 0 ? "down" : "up";
+        }
     }
 
-    // Colisão com jogador
+    // ========================
+    // ANIMAÇÃO
+    // ========================
+    frameTimer += deltaTime;
+
+    if (frameTimer > frameInterval) {
+        frameTimer = 0;
+        currentFrame++;
+
+        if (currentFrame >= TOTAL_FRAMES) {
+            currentFrame = 0;
+        }
+    }
+
+    // ========================
+    // COLISÃO
+    // ========================
     if (
         player.x < snake.x + snake.width &&
         player.x + player.width > snake.x &&
@@ -359,14 +430,98 @@ function updateSnake() {
         if (!player.upgraded) {
             gameState = "gameover";
         } else {
-            // Cobra some
             snakeActive = false;
-            // Opcional: criar efeito de partículas de água
-            drawWaterExplosion(snake.x + snake.width / 2, snake.y + snake.height / 2);
         }
+    }
+
+    const isMoving = keys["ArrowLeft"] ||
+        keys["ArrowRight"] ||
+        keys["ArrowUp"] ||
+        keys["ArrowDown"];
+
+    if (isMoving) {
+
+        frameTimer += deltaTime;
+
+        if (frameTimer > frameInterval) {
+            frameTimer = 0;
+            currentFrame++;
+
+            if (currentFrame >= TOTAL_FRAMES) {
+                currentFrame = 0;
+            }
+        }
+    } else {
+        currentFrame = 0; // parado usa primeiro frame
     }
 }
 
+const TOTAL_FRAMES = 47;
+
+function loadSnakeFrames() {
+
+    for (let i = 0; i < TOTAL_FRAMES; i++) {
+
+        const down = new Image();
+        down.src = `snake_down/frame_${i}.png`;
+        snakeSprites.down.push(down);
+
+        const up = new Image();
+        up.src = `snake_up/frame_${i}.png`;
+        snakeSprites.up.push(up);
+
+        const left = new Image();
+        left.src = `snake_left/frame_${i}.png`;
+        snakeSprites.left.push(left);
+
+        const right = new Image();
+        right.src = `snake_right/frame_${i}.png`;
+        snakeSprites.right.push(right);
+    }
+}
+
+loadSnakeFrames();
+
+
+function drawSnake() {
+
+    const sprite = snakeSprites[currentDirection][currentFrame];
+
+    if (sprite) {
+        ctx.drawImage(sprite, snake.x, snake.y, snake.width, snake.height);
+    }
+}
+
+
+
+// =============================
+// LOOP PRINCIPAL
+
+let lastTime = 0;
+
+function gameLoop(time) {
+
+    let deltaTime = time - lastTime;
+    lastTime = time;
+
+    update(deltaTime);
+    draw();
+
+    requestAnimationFrame(gameLoop);
+}
+
+
+function update(deltaTime) {
+    if (gameState === "playing") {
+        landOffset += riverSpeed;
+
+        createBoatWaves();
+        updatePlayer();
+        updateSnake(deltaTime);
+        updateObstacles();
+        updateUpgrades();
+    }
+}
 
 function drawGameOver() {
     ctx.fillStyle = "black";
@@ -381,61 +536,6 @@ function drawGameOver() {
     if (controls) controls.style.display = "none";
 
     showRestartButton();
-}
-
-function drawSnake() {
-
-    const segments = 8;
-    const segmentHeight = snake.height / segments;
-
-    for (let i = 0; i < segments; i++) {
-
-        const wave = Math.sin(Date.now() * 0.01 + i) * 10;
-
-        ctx.drawImage(
-            snakeImage,
-            snake.x + wave,
-            snake.y + i * segmentHeight,
-            snake.width,
-            segmentHeight
-        );
-    }
-
-    // 💀 OLHOS SEMPRE VERMELHOS
-    ctx.fillStyle = "red";
-
-    ctx.beginPath();
-    ctx.arc(snake.x + 20, snake.y + 15, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(snake.x + 45, snake.y + 15, 6, 0, Math.PI * 2);
-    ctx.fill();
-
-}
-
-
-// =============================
-// LOOP PRINCIPAL
-// =============================
-function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-
-}
-
-function update() {
-    if (gameState === "playing") {
-        landOffset += riverSpeed;
-
-        createBoatWaves();
-        updatePlayer();
-        updateSnake();
-        updateObstacles();
-        updateUpgrades();
-    }
-
 }
 
 function updateUpgrades() {
@@ -479,8 +579,6 @@ function drawUpgrades() {
         ctx.drawImage(up.image, up.x, up.y, up.width, up.height);
     });
 }
-
-
 
 function draw() {
 
@@ -566,10 +664,9 @@ function drawGame() {
 // =============================
 // PLAYER
 // =============================
-
 function updatePlayer() {
 
-    
+    if (gameState !== "playing") return;
 
     // =========================
     // VELOCIDADE DO RIO
@@ -577,12 +674,16 @@ function updatePlayer() {
     player.y += riverSpeed * 0.5;
 
     // Motor empurra para cima
-    player.y -= enginePower;
+    // player.y -= enginePower;
+
+    // Movimento baseado no ângulo do barco
+    player.x += Math.sin(player.angle) * enginePower;
+    player.y -= Math.cos(player.angle) * enginePower;
+
 
     // =========================
     // MOVIMENTO HORIZONTAL
     // =========================
-
     if (keys["ArrowLeft"]) {
         player.velocityX -= player.acceleration;
     }
@@ -592,9 +693,8 @@ function updatePlayer() {
     }
 
     // =========================
-    // MOVIMENTO VERTICAL
+    // MOVIMENTO VERTICAL (Motor)
     // =========================
-
     if (keys["ArrowUp"]) {
         player.boosting = true;
 
@@ -602,16 +702,47 @@ function updatePlayer() {
         if (enginePower > maxEnginePower) {
             enginePower = maxEnginePower;
         }
-
     } else {
         player.boosting = false;
 
-        enginePower -= 0.1; // perde força aos poucos
+        enginePower -= 0.1;
         if (enginePower < 0) enginePower = 0;
     }
 
-    // 🎧 Controle do som do motor
-    if (enginePower > 0 && gameState === "playing") {
+    if (keys["ArrowDown"]) {
+        player.boosting = true;
+
+        enginePower += engineAcceleration;
+        if (enginePower > maxEnginePower) {
+            enginePower = maxEnginePower;
+        }
+    }
+
+    // =========================
+    // DIREÇÃO FIXA 90°
+    // =========================
+
+    if (keys["ArrowUp"]) {
+        player.targetAngle = 0;
+    }
+
+    if (keys["ArrowRight"]) {
+        player.targetAngle = Math.PI / 2;
+    }
+
+    if (keys["ArrowDown"]) {
+        player.targetAngle = Math.PI;
+    }
+
+    if (keys["ArrowLeft"]) {
+        player.targetAngle = -Math.PI / 2;
+    }
+
+
+    // =========================
+    // CONTROLE DO SOM DO MOTOR
+    // =========================
+    if (enginePower > 0) {
 
         if (engineSound.paused) {
             engineSound.play().catch(() => { });
@@ -625,14 +756,11 @@ function updatePlayer() {
             engineSound.pause();
             engineSound.currentTime = 0;
         }
-
     }
-
 
     // =========================
     // TURBO
     // =========================
-
     if (player.boosting) {
         player.maxSpeedX = 10;
         player.maxSpeedY = 8;
@@ -644,7 +772,6 @@ function updatePlayer() {
     // =========================
     // LIMITES DE VELOCIDADE
     // =========================
-
     player.velocityX = Math.max(
         -player.maxSpeedX,
         Math.min(player.velocityX, player.maxSpeedX)
@@ -658,34 +785,33 @@ function updatePlayer() {
     // =========================
     // ATRITO
     // =========================
-
     player.velocityX *= player.frictionX;
     player.velocityY *= player.frictionY;
 
     // =========================
     // ATUALIZA POSIÇÃO
     // =========================
-
     player.x += player.velocityX;
     player.y += player.velocityY;
 
     // =========================
-    // LIMITES DA TELA
+    // LIMITES DO RIO
     // =========================
-
     if (player.x < riverX)
         player.x = riverX;
 
     if (player.x + player.width > riverX + riverWidth)
         player.x = riverX + riverWidth - player.width;
 
+    if (player.y < 0)
+        player.y = 0;
 
-    if (player.y < 0) player.y = 0;
+    // =========================
+    // 🔥 ROTACIONAR BARCO
 
     // =========================
     // PARTÍCULAS DE ÁGUA
     // =========================
-
     if (Math.abs(player.velocityX) > 1 || Math.abs(player.velocityY) > 1) {
 
         particles.push({
@@ -694,27 +820,34 @@ function updatePlayer() {
             size: Math.random() * 6 + 2,
             speedY: Math.random() * 2 + 1,
             alpha: 1,
-            drift: (Math.random() - 0.5) * 1.5 // 🌊 espalhamento lateral
+            drift: (Math.random() - 0.5) * 1.5
         });
 
-
-        // Limite de partículas para não pesar
         if (particles.length > 100) {
             particles.shift();
         }
-
-
     }
 
     createSideWaves();
 
+    // =========================
+    // CAIU PARA FORA DA TELA
+    // =========================
     if (player.y > canvas.height) {
-        // gameState = "gameover";
         endGame();
         updateMobileControls();
-
     }
 
+    // =========================
+    // INTERPOLAÇÃO DA ROTAÇÃO
+    // =========================
+
+    let difference = player.targetAngle - player.angle;
+
+    // Normaliza diferença entre -PI e PI
+    difference = Math.atan2(Math.sin(difference), Math.cos(difference));
+
+    player.angle += difference * player.rotationSpeed;
 }
 
 function endGame() {
@@ -725,19 +858,33 @@ function endGame() {
     engineSound.currentTime = 0;
 }
 
-
 function drawPlayer() {
 
     const imageToDraw = player.upgraded ? boatUpgradeImage : boatImage;
 
+    ctx.save();
+
+    // mover origem para centro do barco
+    ctx.translate(
+        player.x + player.width / 2,
+        player.y + player.height / 2
+    );
+
+    // aplicar rotação
+    ctx.rotate(player.angle);
+
+    // desenhar imagem centralizada
     ctx.drawImage(
         imageToDraw,
-        player.x,
-        player.y,
+        -player.width / 2,
+        -player.height / 2,
         player.width,
         player.height
     );
+
+    ctx.restore();
 }
+
 
 
 function createSideWaves() {
@@ -776,17 +923,32 @@ function createSideWaves() {
 
 function drawRiver() {
 
-    // 🌳 LADO ESQUERDO (terra)
-    ctx.fillStyle = "#2e8b57";
-    ctx.fillRect(0, 0, riverX, canvas.height);
+    // 🌳 LADO ESQUERDO (Desenha a imagem repetida verticalmente)
+    for (let i = -canvas.height; i < canvas.height * 2; i += canvas.height) {
+        // O cálculo do Y usa o landOffset para dar a sensação de movimento
+        let yPos = (i + landOffset) % (canvas.height * 2) - canvas.height;
 
-    // 🌳 LADO DIREITO (terra)
-    ctx.fillRect(
-        riverX + riverWidth,
-        0,
-        canvas.width - (riverX + riverWidth),
-        canvas.height
-    );
+        ctx.drawImage(
+            landLeftImage,
+            0,          // X: encostado na esquerda
+            yPos,       // Y animado
+            riverX,     // Largura: vai até o início do rio
+            canvas.height // Altura: tamanho do canvas para preencher tudo
+        );
+    }
+
+    // 🌳 LADO DIREITO
+    for (let i = -canvas.height; i < canvas.height * 2; i += canvas.height) {
+        let yPos = (i + landOffset) % (canvas.height * 2) - canvas.height;
+
+        ctx.drawImage(
+            landRightImage,
+            riverX + riverWidth,              // X: começa onde o rio termina
+            yPos,                             // Y animado
+            canvas.width - (riverX + riverWidth), // Largura: o que sobrar da tela
+            canvas.height
+        );
+    }
 
     // 🌲 Árvores animadas
     for (let i = 0; i < canvas.height; i += 120) {
@@ -827,7 +989,7 @@ function drawTree(x, y) {
     ctx.fillRect(x - 5, y + 20, 10, 20);
 
     // Copa
-    ctx.fillStyle = "#228B22";
+    ctx.fillStyle = "#125212";
     ctx.beginPath();
     ctx.arc(x, y, 20, 0, Math.PI * 2);
     ctx.fill();
@@ -880,26 +1042,33 @@ function createBoatWaves() {
     }
 }
 
+
 function drawWaterWaves() {
-    const waveHeight = 5;      // altura da onda
-    const waveLength = 100;     // comprimento da onda
-    const waveSpeed = 0.05;     // velocidade de deslocamento
-    const waveCount = 20;        // número de ondas no rio
+    const waveHeight = 7;
+    const waveSpeed = 2;
+    const waveCount = 32;
 
     for (let i = 0; i < waveCount; i++) {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 + i * 0.05})`; // transparencia suave
+
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.01 + i * 0.01})`;
         ctx.lineWidth = 2;
         ctx.beginPath();
 
-        for (let x = 0; x < canvas.width; x++) {
-            let y = canvas.height / 3 + i * 20 + Math.sin((x * 0.05) + (Date.now() * waveSpeed) + i) * waveHeight;
-            if (x === 0) ctx.moveTo(x, y);
+        for (let y = 0; y < canvas.height; y++) {
+
+            let x =
+                canvas.width / 4 +
+                i * 15 +
+                Math.sin((y * 0.05) + (Date.now() * waveSpeed) + i) * waveHeight;
+
+            if (y === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
 
         ctx.stroke();
     }
 }
+
 
 function drawWaterTrail() {
 
@@ -919,39 +1088,6 @@ function drawWaterTrail() {
             particles.splice(index, 1);
         }
     });
-}
-
-
-function startGame() {
-
-    gameState = "playing";
-
-    resizeCanvas();
-
-    createMobileControls();   // garante que existe
-    updateMobileControls();   // posiciona corretamente
-
-    lives = 3;
-    snakeActive = false;
-    snake.emerging = false;
-
-    snake.x = canvas.width / 2;
-    snake.y = canvas.height + 200;
-
-    player.x = canvas.width / 2 - player.width / 2;
-    player.y = canvas.height * 0.6;
-
-    player.velocityX = 0;
-    player.velocityY = 0;
-
-    obstacles = [];
-    particles = [];
-
-    enginePower = 0;
-    engineSound.pause();
-    engineSound.currentTime = 0;
-
-
 }
 
 
@@ -1072,6 +1208,16 @@ canvas.addEventListener("touchend", (e) => {
     keys["ArrowUp"] = false;
     keys["ArrowDown"] = false;
 });
+
+document.addEventListener("keydown", (e) => {
+
+    if (e.key === "ArrowLeft") currentDirection = "left";
+    if (e.key === "ArrowRight") currentDirection = "right";
+    if (e.key === "ArrowUp") currentDirection = "up";
+    if (e.key === "ArrowDown") currentDirection = "down";
+
+});
+
 
 
 gameLoop();
