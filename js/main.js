@@ -5,12 +5,33 @@ let riverWidth = canvas.width * 0.5; // 50% da tela
 let riverX = canvas.width / 2 - riverWidth / 2;
 let landOffset = 0;
 
-const landLeftImage = new Image();
-landLeftImage.src = "assets/terra_left.png";
+let waveOffset = 0; // Crie essa variável no topo do código
 
-const landRightImage = new Image();
-landRightImage.src = "assets/terra_right.png";
+let fireworks = []; // Array para os fogos de artifício
+// ----------imagem do açaí para mudança de fase---------------
+const acaiImage = new Image();
+acaiImage.src = "assets/acai.png";
 
+let score = 0;
+let level = 1;
+const coinsToNextLevel = 10;
+let coins = [];
+//----------------------------------------------------------
+
+const terraEsq1 = new Image(); terraEsq1.src = "assets/terra_left1.png";
+const terraDir1 = new Image(); terraDir1.src = "assets/terra_right1.png";
+
+// FASE 2
+const terraEsq2 = new Image(); terraEsq2.src = "assets/terra_left2.png";
+const terraDir2 = new Image(); terraDir2.src = "assets/terra_right2.png";
+
+// FASE 3
+const terraEsq3 = new Image(); terraEsq3.src = "assets/terra_left3.png";
+const terraDir3 = new Image(); terraDir3.src = "assets/terra_right3.png";
+
+// Variáveis que o jogo vai usar para desenhar (começam com a fase 1)
+let currentLandLeft = terraEsq1;
+let currentLandRight = terraDir1;
 
 const snakeSprites = {
     down: [],
@@ -22,7 +43,7 @@ const snakeSprites = {
 let currentDirection = "down";
 let currentFrame = 0;
 let frameTimer = 0;
-let frameInterval = 150; // velocidade da animação (ms)
+let frameInterval = 120; // velocidade da animação (ms)
 
 let riverSpeed = 1.5;
 let riverAcceleration = 0.02;
@@ -47,7 +68,6 @@ boatUpgradeImage.src = "assets/barquinho3 (2).png";
 
 // Obstáculos
 const obstacleImage = new Image();
-// obstacleImage.src = "assets/tronco.png";
 obstacleImage.src = "assets/murure.png";
 
 // Upgrade
@@ -64,7 +84,6 @@ let gameState = "menu";
 
 // Variáveis da cobra
 const snake = {
-
     x: canvas.width / 2,
     y: canvas.height + 200, // começa fora da tela
     width: 80,
@@ -109,7 +128,6 @@ const player = {
     frictionY: 0.95,
 
     boosting: false,
-
     // NOVO: upgrade
     upgraded: false,
     upgradeTimer: 0,   // duração do upgrade em frames
@@ -130,9 +148,7 @@ function resizeCanvas() {
 
     riverWidth = canvas.width * 0.5;
     riverX = canvas.width / 2 - riverWidth / 2;
-
 }
-
 
 window.addEventListener("resize", () => {
     resizeCanvas();
@@ -145,24 +161,6 @@ window.addEventListener("load", () => {
         updateMobileControls();
     }, 200); // pequeno delay para o mobile calcular a viewport correta
 });
-
-
-let upgrades = [];
-
-function spawnUpgrade() {
-    upgrades.push({
-        // x: Math.random() * (canvas.width - 40),
-        x: riverX + Math.random() * (riverWidth - 40),
-        y: -50,
-        width: 40,
-        height: 40,
-        speed: 2,
-        type: "powerboat", // só como exemplo
-        image: upgradeImage // referencia da imagem
-    });
-}
-setInterval(spawnUpgrade, 10000)
-
 
 let keys = {};
 
@@ -234,41 +232,67 @@ function drawLives() {
     }
 }
 
-function startGame() {
+function startGame(selectedLevel = 1) {
+    // Esconde o menu HTML
+    const menu = document.getElementById("gameMenu");
+    if (menu) menu.style.display = "none";
 
+    // 2. Define o estado e a fase escolhida
     gameState = "playing";
-
-    resizeCanvas();
-
-    createMobileControls();   // garante que existe
-    updateMobileControls();   // posiciona corretamente
-
+    level = selectedLevel;
+    score = 0;
     lives = 3;
+    // Configura o cenário inicial baseado na fase escolhida
+    if (level === 1) {
+        currentLandLeft = terraEsq1;
+        currentLandRight = terraDir1;
+        riverSpeed = 1.5;
+    } else if (level === 2) {
+        currentLandLeft = terraEsq2;
+        currentLandRight = terraDir2;
+        riverSpeed = 3.0;
+    } else {
+        currentLandLeft = terraEsq3;
+        currentLandRight = terraDir3;
+        riverSpeed = 4.5;
+    }
+    // 4. Reseta a Física e Posição do Barco (A parte antiga importante)
+    player.x = canvas.width / 2 - player.width / 2;
+    player.y = canvas.height * 0.6;
+    player.velocityX = 0;
+    player.velocityY = 0;
+    player.angle = 0;
+    player.upgraded = false;
+    player.width = player.baseWidth;
+    player.height = player.baseHeight;
+
+    // 5. Reseta a Cobra e Inimigos
     snakeActive = false;
     snake.emerging = false;
-
     snake.x = canvas.width / 2;
     snake.y = canvas.height + 200;
 
-    player.x = canvas.width / 2 - player.width / 2;
-    player.y = canvas.height * 0.6;
-
-    player.velocityX = 0;
-    player.velocityY = 0;
-
+    // Limpa o jogo para começar do zero
     obstacles = [];
+    coins = [];
+    upgrades = [];
     particles = [];
 
+    // 6. Áudio e Controles
+    unlockAudio();
     enginePower = 0;
     engineSound.pause();
     engineSound.currentTime = 0;
 
-
+    resizeCanvas();
+    if (typeof createMobileControls === "function") {
+        createMobileControls();
+        updateMobileControls();
+    }
 }
 
 function loseLife() {
     lives--;
-
     // 🔥 TREMER TELA
     cameraShake = 15; // intensidade
     player.velocityX *= 0.3;
@@ -291,31 +315,62 @@ function loseLife() {
 }
 
 function restartGame() {
-    // Remover botão
+    // 1. Remover botão de restart
     const button = document.getElementById("restartButton");
     if (button) button.remove();
 
-    // Resetar variáveis
+    // 2. Resetar Estado do Jogo
     gameState = "playing";
-    lives = 3;
+    level = 1;      // Volta para a fase 1
+    score = 0;      // Zera o açaí
+    lives = 3;      // Restaura as vidas
+    riverSpeed = 1.5; // Reseta a velocidade do rio para o padrão da fase 1
+
+    // --- NOVO: Resetar o cenário para a Fase 1 ---
+    currentLandLeft = terraEsq1;
+    currentLandRight = terraDir1;
+
+    // 3. Resetar FÍSICA do Jogador (Onde está o bug)
+    player.x = canvas.width / 2 - player.width / 2;
+    player.y = canvas.height * 0.6;
+    player.velocityX = 0;
+    player.velocityY = 0;
+    player.angle = 0;
+    player.targetAngle = 0;
+
+    // IMPORTANTE: Resetar o motor e o upgrade
+    enginePower = 0;
+    maxEnginePower = 6; // Volta o motor ao normal
+    player.upgraded = false;
+    player.width = player.baseWidth;
+    player.height = player.baseHeight;
+
+    // 4. Limpar Inimigos e Itens
     snakeActive = false;
     snake.emerging = false;
     snake.x = canvas.width / 2;
     snake.y = canvas.height + 200;
 
     obstacles = [];
-    player.x = canvas.width / 2;
-    player.y = canvas.height - 100;
-    player.velocityX = 0;
-    player.velocityY = 0;
-
+    coins = [];
+    upgrades = [];
     particles = [];
 
+    // 5. Parar o som
+    engineSound.pause();
+    engineSound.currentTime = 0;
+
+    // 6. Reexibir controles se for mobile
     const controls = document.getElementById("mobileControls");
     if (controls && window.innerWidth <= 900) {
         controls.style.display = "grid";
     }
-
+    showMainMenu();
+}
+// No seu restartGame, certifique-se de mostrar o menu de volta se quiser:
+function showMainMenu() {
+    gameState = "menu";
+    document.getElementById("gameMenu").style.display = "flex";
 }
 
 function unlockAudio() {
@@ -329,29 +384,14 @@ function unlockAudio() {
         .catch(() => { });
 }
 
-function spawnObstacle() {
-    obstacles.push({
-        x: riverX + Math.random() * (riverWidth - 40),
-
-        y: -50,
-        width: 40,
-        height: 40,
-        speed: 1.5,
-        image: obstacleImage
-    });
-}
-
 function updateObstacles() {
-
     obstacles.forEach((obs, index) => {
-
         obs.y += obs.speed;
 
         // Remove quando sai da tela
         if (obs.y > canvas.height) {
             obstacles.splice(index, 1);
         }
-
         // Colisão com player
         if (
             player.x < obs.x + obs.width &&
@@ -366,14 +406,11 @@ function updateObstacles() {
                 obstacles.splice(index, 1);
             }
         }
-
     });
 }
 
 function drawObstacles() {
-
     ctx.fillStyle = "brown";
-
     obstacles.forEach(obs => {
         // ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
         ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
@@ -381,10 +418,7 @@ function drawObstacles() {
 }
 
 function updateSnake(deltaTime) {
-
-
     if (!snakeActive) return;
-
     // ========================
     // IA DE PERSEGUIÇÃO
     // ========================
@@ -393,14 +427,26 @@ function updateSnake(deltaTime) {
     const distance = Math.sqrt(dx * dx + dy * dy);
 
     if (distance > 1) {
+
         snake.x += (dx / distance) * snake.speed;
         snake.y += (dy / distance) * snake.speed;
 
-        // Define direção
-        if (Math.abs(dx) > Math.abs(dy)) {
-            currentDirection = dx > 0 ? "right" : "left";
+        // --- NOVA LÓGICA DE DIREÇÃO SUAVE ---
+        // Calcula o ângulo real para o jogador
+        let targetAngle = Math.atan2(dy, dx);
+
+        // Converte o ângulo em uma das 4 direções de sprite
+        // Isso evita que ela mude de frame por qualquer grauzinho
+        let angleDeg = targetAngle * (180 / Math.PI);
+
+        if (angleDeg > -45 && angleDeg <= 45) {
+            currentDirection = "right";
+        } else if (angleDeg > 45 && angleDeg <= 135) {
+            currentDirection = "down";
+        } else if (angleDeg > -135 && angleDeg <= -45) {
+            currentDirection = "up";
         } else {
-            currentDirection = dy > 0 ? "down" : "up";
+            currentDirection = "left";
         }
     }
 
@@ -411,13 +457,8 @@ function updateSnake(deltaTime) {
 
     if (frameTimer > frameInterval) {
         frameTimer = 0;
-        currentFrame++;
-
-        if (currentFrame >= TOTAL_FRAMES) {
-            currentFrame = 0;
-        }
+        currentFrame = (currentFrame + 1) % TOTAL_FRAMES;
     }
-
     // ========================
     // COLISÃO
     // ========================
@@ -434,107 +475,527 @@ function updateSnake(deltaTime) {
         }
     }
 
-    const isMoving = keys["ArrowLeft"] ||
-        keys["ArrowRight"] ||
-        keys["ArrowUp"] ||
-        keys["ArrowDown"];
-
-    if (isMoving) {
-
-        frameTimer += deltaTime;
-
-        if (frameTimer > frameInterval) {
-            frameTimer = 0;
-            currentFrame++;
-
-            if (currentFrame >= TOTAL_FRAMES) {
-                currentFrame = 0;
-            }
-        }
-    } else {
-        currentFrame = 0; // parado usa primeiro frame
-    }
 }
-
 const TOTAL_FRAMES = 47;
 
 function loadSnakeFrames() {
-
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
-
-        const down = new Image();
-        down.src = `snake_down/frame_${i}.png`;
-        snakeSprites.down.push(down);
-
-        const up = new Image();
-        up.src = `snake_up/frame_${i}.png`;
-        snakeSprites.up.push(up);
-
-        const left = new Image();
-        left.src = `snake_left/frame_${i}.png`;
-        snakeSprites.left.push(left);
-
-        const right = new Image();
-        right.src = `snake_right/frame_${i}.png`;
-        snakeSprites.right.push(right);
-    }
+    const directions = ['down', 'up', 'left', 'right'];
+    directions.forEach(dir => {
+        for (let i = 0; i < TOTAL_FRAMES; i++) {
+            const img = new Image();
+            // O segredo aqui é não travar o jogo esperando carregar
+            img.src = `snake_${dir}/frame_${i}.png`;
+            snakeSprites[dir].push(img);
+        }
+    });
 }
 
 loadSnakeFrames();
-
-
 function drawSnake() {
-
     const sprite = snakeSprites[currentDirection][currentFrame];
-
     if (sprite) {
         ctx.drawImage(sprite, snake.x, snake.y, snake.width, snake.height);
     }
 }
 
-
-
 // =============================
 // LOOP PRINCIPAL
-
 let lastTime = 0;
-
 function gameLoop(time) {
-
     let deltaTime = time - lastTime;
     lastTime = time;
-
     update(deltaTime);
     draw();
-
     requestAnimationFrame(gameLoop);
 }
 
-
 function update(deltaTime) {
     if (gameState === "playing") {
-        landOffset += riverSpeed;
+        waveOffset += 0.05; // Faz as ondas "pularem"
 
         createBoatWaves();
+        updateParticles();
         updatePlayer();
         updateSnake(deltaTime);
         updateObstacles();
         updateUpgrades();
+        updateCoins();
+        
+    }
+    if (gameState === "win") {
+            updateFireworks();
+            if (Math.random() < 0.05) createFirework();
+        }
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        
+        // Faz a partícula subir ou se espalhar um pouco (opcional)
+        p.y += riverSpeed * 0.8; 
+        
+        // O SEGREDO: Diminuir o alpha gradualmente
+        p.alpha -= p.decay; // Ajuste este valor para o rastro sumir mais rápido ou devagar
+
+        // Se a partícula sumiu, remove do array para não pesar o jogo
+        if (p.alpha <= 0 || p.y > canvas.height) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function spawnObstacle() {
+    const x = riverX + Math.random() * (riverWidth - 50);
+    // Adicionei 'speed' aqui
+    obstacles.push({ 
+        x: x, 
+        y: -50, 
+        width: 50, 
+        height: 50, 
+        speed: riverSpeed + 1, // Ele desce um pouco mais rápido que o rio
+        image: obstacleImage 
+    });
+}
+
+let upgrades = [];
+
+function spawnUpgrade() { // As estrelas
+    const x = riverX + Math.random() * (riverWidth - 30);
+    // Adicionei 'speed' aqui
+    upgrades.push({ 
+        x: x, 
+        y: -30, 
+        width: 30, 
+        height: 30, 
+        speed: riverSpeed,
+        image: upgradeImage 
+    });
+}
+
+setInterval(() => {
+    if (gameState === "playing") spawnUpgrade();
+}, 10000); // Uma estrela a cada 10 segundos
+//-----------------------------------------
+function spawnCoin() { // Açaí
+    const x = riverX + Math.random() * (riverWidth - 25);
+    // Adicionei 'speed' aqui
+    coins.push({ 
+        x: x, 
+        y: -25, 
+        width: 25, 
+        height: 25, 
+        speed: riverSpeed 
+    });
+}
+// Chame isso no seu setInterval ou dentro do update
+function updateCoins() {
+    // Verificação de segurança: se o array não existe, sai da função
+    if (!coins || coins.length === 0) return;
+
+    for (let i = coins.length - 1; i >= 0; i--) {
+        let c = coins[i];
+        c.y += c.speed;
+        // Verifica se 'c' realmente existe antes de acessar o 'y'
+        if (!c) continue;
+        // Colisão com o jogador
+        if (
+            player.x < c.x + c.width &&
+            player.x + player.width > c.x &&
+            player.y < c.y + c.height &&
+            player.y + player.height > c.y
+        ) {
+            coins.splice(i, 1);
+            score++;
+            checkLevelUp(); // Verifica se passou de fase
+            return; // IMPORTANTE: Sai da função após subir de nível para evitar ler o próximo item do array vazio
+        }
+        // Remove se sair da tela
+        else if (c && c.y > canvas.height) {
+            coins.splice(i, 1);
+        }
+    }
+}
+setInterval(() => {
+    if (gameState === "playing") spawnCoin();
+}, 1500); // Um açaí a cada 1.5 segundos
+
+// Cria um obstáculo (vitória-régia/tronco) a cada 1.5 segundos
+setInterval(() => {
+    if (gameState === "playing") {
+        spawnObstacle();
+    }
+}, 2000);
+//---------------------------------------
+function checkLevelUp() {
+    if (score >= coinsToNextLevel) {
+        if (level < 3) {
+            alert("Nível " + level + "!");
+            keys = {}; // <--- ADICIONE ISSO AQUI
+            player.velocityX = 0; // Para o barco não "voar" com o embalo da fase anterior
+            player.velocityY = 0;
+            level++;
+            score = 0; // Reseta o score para a nova fase ou mantém acumulado
+            riverSpeed += 1.5; // Aumenta a dificuldade
+
+            // Lógica de troca manual
+            if (level === 2) {
+                currentLandLeft = terraEsq2;
+                currentLandRight = terraDir2;
+            } else if (level === 3) {
+                currentLandLeft = terraEsq3;
+                currentLandRight = terraDir3;
+            }
+            obstacles.length = 0;
+            coins.length = 0;
+            keys = {}; // Reseta teclas para não bugar
+        } else {
+            // VITÓRIA TOTAL
+            gameState = "win"; // Você pode criar uma tela de vitória
+            engineSound.pause();
+            showWinScreen();
+        }
+    }
+}
+//--------------------------------------------------------
+function showWinScreen() {
+    // Evita duplicados
+    if (document.getElementById("winContainer")) return;
+    const container = document.createElement("div");
+    container.id = "winContainer";
+    Object.assign(container.style, {
+        position: "fixed", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        textAlign: "center", backgroundColor: "rgba(0,0,0,0.8)",
+        padding: "30px", borderRadius: "20px", color: "white", zIndex: "2000",
+        fontFamily: "Arial"
+    });
+    container.innerHTML = `
+        <h1>🏆 VOCÊ VENCEU! 🏆</h1>
+        <p>Parabéns! Você escapou do rio.</p>
+        <input type="text" id="playerName" placeholder="Seu Nome" style="padding:10px; border-radius:5px; border:none;"><br><br>
+        <button id="saveScore" style="padding:10px 20px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:5px;">Salvar no Ranking</button>
+        <button id="restartWin" style="padding:10px 20px; cursor:pointer; background:#3498db; color:white; border:none; border-radius:5px; margin-left:10px;">Jogar Denovo</button>
+    `;
+
+    document.body.appendChild(container);
+    // mude a lógica do botão saveScore para:
+
+    document.getElementById("saveScore").onclick = () => {
+        const nameInput = document.getElementById("playerName");
+        const name = nameInput.value.trim() || "Anônimo";
+
+        saveToRanking(name); // Salva no localStorage
+
+        // Pequeno efeito visual antes de abrir o ranking
+        nameInput.disabled = true;
+        document.getElementById("saveScore").innerText = "Salvo!";
+
+        setTimeout(() => {
+            showRankingScreen(); // Abre a telinha de Ranking que criamos acima
+        }, 1000);
+    };
+
+    // Botão Reiniciar
+    document.getElementById("restartWin").onclick = () => {
+        container.remove();
+        restartGame();
+    };
+}
+
+//-----------------Exibir ranking---------------------------
+function showRankingScreen() {
+    // Remove qualquer tela de vitória ou ranking que já esteja aberta
+    const oldWin = document.getElementById("winContainer");
+    if (oldWin) oldWin.remove();
+
+    const oldRank = document.getElementById("rankingContainer");
+    if (oldRank) oldRank.remove();
+
+    const container = document.createElement("div");
+    container.id = "rankingContainer";
+    Object.assign(container.style, {
+        position: "fixed", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+        backgroundColor: "rgba(20, 30, 48, 0.95)",
+        padding: "30px", borderRadius: "15px", color: "white",
+        zIndex: "3000", fontFamily: "Arial", textAlign: "center",
+        boxShadow: "0 0 20px rgba(0,0,0,0.5)", minWidth: "300px"
+    });
+
+    // Pega os dados do localStorage e ordena (se você tivesse pontuação, ordenaria por ela)
+    let ranking = JSON.parse(localStorage.getItem("riverRanking") || "[]");
+
+    let tableHTML = `
+        <h2 style="color: #f1c40f;">🏆 TOP ESCAPISTAS 🏆</h2>
+        <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid #555;">
+                    <th style="padding: 10px;">Nome</th>
+                    <th style="padding: 10px;">Data</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    if (ranking.length === 0) {
+        tableHTML += `<tr><td colspan="2" style="padding: 20px;">Nenhum recorde ainda!</td></tr>`;
+    } else {
+        // Mostra os últimos 10 que venceram
+        ranking.slice(-10).reverse().forEach(item => {
+            tableHTML += `
+                <tr style="border-bottom: 1px solid #333;">
+                    <td style="padding: 10px;">${item.name}</td>
+                    <td style="padding: 10px;">${item.date}</td>
+                </tr>
+            `;
+        });
+    }
+
+    tableHTML += `
+            </tbody>
+        </table>
+        <br>
+        <button id="closeRanking" style="padding: 10px 20px; cursor:pointer; background:#e74c3c; color:white; border:none; border-radius:5px;">Fechar</button>
+    `;
+
+    container.innerHTML = tableHTML;
+    document.body.appendChild(container);
+
+    document.getElementById("closeRanking").onclick = () => {
+        container.remove();
+        if (gameState === "win") restartGame(); // Se fechar após vencer, reinicia o jogo
+    };
+}
+
+//-----------------------------fim exibir ranking----------------------
+function saveToRanking(name) {
+    let ranking = JSON.parse(localStorage.getItem("riverRanking") || "[]");
+    ranking.push({ name: name, date: new Date().toLocaleDateString() });
+    localStorage.setItem("riverRanking", JSON.stringify(ranking));
+}
+
+function createFirework() {
+    if (gameState !== "win") return;
+    const x = Math.random() * canvas.width;
+    const color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+    for (let i = 0; i < 30; i++) {
+        fireworks.push({
+            x: x, y: canvas.height,
+            vx: (Math.random() - 0.5) * 6,
+            vy: (Math.random() * -10) - 5,
+            alpha: 1, color: color
+        });
+    }
+}
+
+function updateFireworks() {
+    fireworks.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.2; // gravidade
+        p.alpha -= 0.01;
+        if (p.alpha <= 0) fireworks.splice(i, 1);
+    });
+}
+
+function drawFireworks() {
+    fireworks.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+}
+//------------------------------------------------------
+function drawUI() {
+    ctx.fillStyle = "white";
+    ctx.font = "bold 24px Arial";
+    ctx.textAlign = "right";
+
+    // Desenha no canto superior direito com um pouco de margem
+    ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
+    ctx.fillText("Fase: " + level, canvas.width - 20, 70);
+
+    // Ícone do Açaí ao lado do texto
+    if (acaiImage.complete) {
+        ctx.drawImage(acaiImage, canvas.width - 185, 18, 25, 25);
+    }
+}
+//------------------------------------------------------
+// --- FUNÇÕES DE SUPORTE AO DESENHO ---
+
+function drawLand() {
+    if (currentLandLeft && currentLandLeft.complete) {
+        ctx.drawImage(currentLandLeft, 0, 0, riverX, canvas.height);
+    }
+    if (currentLandRight && currentLandRight.complete) {
+        ctx.drawImage(currentLandRight, riverX + riverWidth, 0, canvas.width - (riverX + riverWidth), canvas.height);
+    }
+}
+
+function drawRiver() {
+    ctx.fillStyle = "#1e90ff";
+    ctx.fillRect(riverX, 0, riverWidth, canvas.height);
+
+    // Ondas/Espuma nas bordas (O efeito de "bater na praia")
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    for (let i = 0; i < canvas.height; i += 20) {
+        let wave = Math.sin(waveOffset + i * 0.05) * 7;
+        
+        // Espuma esquerda
+        ctx.beginPath();
+        ctx.arc(riverX + wave, i, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Espuma direita
+        ctx.beginPath();
+        ctx.arc(riverX + riverWidth + wave, i, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// Agrupa o desenho dos itens para organizar o draw()
+function drawItems() {
+    // Desenha o Açaí
+    coins.forEach(c => {
+        if (acaiImage.complete) ctx.drawImage(acaiImage, c.x, c.y, c.width, c.height);
+    });
+
+    // Desenha as Estrelas (Upgrades)
+    upgrades.forEach(up => {
+        if (upgradeImage.complete) ctx.drawImage(upgradeImage, up.x, up.y, up.width, up.height);
+    });
+
+    // Desenha os Obstáculos
+    obstacles.forEach(obs => {
+        if (obstacleImage.complete) ctx.drawImage(obstacleImage, obs.x, obs.y, obs.width, obs.height);
+    });
+}
+// Efeito de Maresia Realista (Vento soprando sobre o rio)
+function drawWindMist() {
+    ctx.save();
+    ctx.globalAlpha = 0.1;
+    ctx.fillStyle = "white";
+    for(let i = 0; i < 3; i++) {
+        let yMist = (Date.now() * 0.05 + i * 300) % canvas.height;
+        ctx.fillRect(riverX, yMist, riverWidth, 20);
+    }
+    ctx.restore();
+}
+
+function drawWaterTrail() {
+    // Se você usa o sistema de partículas para o rastro do barco:
+    particles.forEach((p, index) => {
+        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
+    ctx.rotate(player.angle);
+    
+    // Escolhe a imagem (normal ou upgrade)
+    let img = player.upgraded ? boatUpgradeImage : boatImage;
+    
+    if (img.complete) {
+        ctx.drawImage(img, -player.width / 2, -player.height / 2, player.width, player.height);
+    } else {
+        // Fallback caso a imagem falhe
+        ctx.fillStyle = player.upgraded ? "gold" : "orange";
+        ctx.fillRect(-player.width / 2, -player.height / 2, player.width, player.height);
+    }
+    ctx.restore();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (gameState === "playing" || gameState === "paused" || gameState === "win") {
+        
+        // 1. Camada de Fundo (Terra/Margens)
+        drawLand(); 
+
+        // 2. O Rio e as Ondas (Área azul e espuma)
+        drawRiver(); 
+
+        // 3. Itens e Inimigos
+        drawItems(); // Nova função que agrupa Açaí, Estrelas e Obstáculos
+        if (snakeActive) drawSnake();
+
+        // 4. O Jogador e seu rastro
+        drawWaterTrail();
+        drawPlayer();
+
+        // 5. Efeitos de Clima (Vento/Maresia)
+        drawWindMist(); 
+
+        // 6. Interface
+        drawUI();
+        drawLives();
+
+        // 7. Fogos de Artifício (Só aparecem se vencer)
+        if (gameState === "win") {
+            drawFireworks();
+        }
+
+    } else if (gameState === "menu") {
+        drawMenu();
+    } else if (gameState === "gameover") {
+        drawGameOver();
+    }
+}
+
+function drawMenu() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "white";
+    ctx.font = "bold 40px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 40);
+    ctx.fillText("Pressione ENTER", canvas.width / 2, canvas.height / 2 + 20);
+}
+function drawWindEffects() {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Riscos de vento quase invisíveis
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+        let x = (Math.random() * canvas.width);
+        let y = (Math.random() * canvas.height);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + 100, y + 20); // Vento soprando inclinado
+        ctx.stroke();
     }
 }
 
 function drawGameOver() {
+    // Para o som do motor imediatamente ao morrer
+    engineSound.pause();
+    engineSound.currentTime = 0;
+
+    // Fundo preto sólido
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    // Texto de Game Over
     ctx.fillStyle = "red";
-    ctx.font = "50px Arial";
-    // ctx.fillText("GAME OVER", 250, 300);
-    ctx.fillText("GAME OVER", canvas.width / 2 - 150, canvas.height / 2);
+    ctx.font = "bold 50px Arial";
+    ctx.textAlign = "center"; // Isso facilita centralizar sem precisar fazer contas de subtração
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
 
+    // Esconde os botões do celular para não atrapalhar o botão de restart
     const controls = document.getElementById("mobileControls");
     if (controls) controls.style.display = "none";
 
+    // Mostra o botão para recomeçar
     showRestartButton();
 }
 
@@ -580,28 +1041,7 @@ function drawUpgrades() {
     });
 }
 
-function draw() {
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-
-    if (cameraShake > 0) {
-        const shakeX = (Math.random() - 0.5) * 10;
-        const shakeY = (Math.random() - 0.5) * 10;
-        ctx.translate(shakeX, shakeY);
-        cameraShake--;
-    }
-
-    if (gameState === "menu") drawMenu();
-    if (gameState === "playing") drawGame();
-    if (gameState === "gameover") drawGameOver();
-
-    ctx.restore();
-}
-
 function drawWaterExplosion(x, y) {
-
     for (let i = 0; i < 20; i++) {
         particles.push({
             x: x,
@@ -613,59 +1053,10 @@ function drawWaterExplosion(x, y) {
     }
 }
 
-function drawMenu() {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "white";
-    ctx.font = "bold 40px Arial";
-    ctx.textAlign = "center";
-
-    ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.fillText("Pressione ENTER", canvas.width / 2, canvas.height / 2 + 20);
-}
-
-
-function drawGame() {
-    // ================================
-    // 1️⃣ Desenhar rio e ondas
-    // ================================
-    drawRiver();
-    drawWaterWaves(); // função que cria ondas animadas
-
-    // ================================
-    // 2️⃣ Desenhar obstáculos
-    // ================================
-    drawObstacles();
-
-    drawUpgrades();
-    // ================================
-    // 3️⃣ Desenhar vidas do jogador
-    // ================================
-    drawLives();
-
-
-    // ================================
-    // 4️⃣ Desenhar cobra se estiver ativa
-    // ================================
-    if (snakeActive) {
-        drawSnake();
-    }
-
-    drawPlayer();
-
-    // ================================
-    // 6️⃣ Desenhar partículas de água
-    // ================================
-    drawWaterTrail();
-
-}
-
 // =============================
 // PLAYER
 // =============================
 function updatePlayer() {
-
     if (gameState !== "playing") return;
 
     // =========================
@@ -673,14 +1064,9 @@ function updatePlayer() {
     // =========================
     player.y += riverSpeed * 0.5;
 
-    // Motor empurra para cima
-    // player.y -= enginePower;
-
     // Movimento baseado no ângulo do barco
     player.x += Math.sin(player.angle) * enginePower;
     player.y -= Math.cos(player.angle) * enginePower;
-
-
     // =========================
     // MOVIMENTO HORIZONTAL
     // =========================
@@ -721,7 +1107,6 @@ function updatePlayer() {
     // =========================
     // DIREÇÃO FIXA 90°
     // =========================
-
     if (keys["ArrowUp"]) {
         player.targetAngle = 0;
     }
@@ -827,7 +1212,6 @@ function updatePlayer() {
             particles.shift();
         }
     }
-
     createSideWaves();
 
     // =========================
@@ -858,39 +1242,8 @@ function endGame() {
     engineSound.currentTime = 0;
 }
 
-function drawPlayer() {
-
-    const imageToDraw = player.upgraded ? boatUpgradeImage : boatImage;
-
-    ctx.save();
-
-    // mover origem para centro do barco
-    ctx.translate(
-        player.x + player.width / 2,
-        player.y + player.height / 2
-    );
-
-    // aplicar rotação
-    ctx.rotate(player.angle);
-
-    // desenhar imagem centralizada
-    ctx.drawImage(
-        imageToDraw,
-        -player.width / 2,
-        -player.height / 2,
-        player.width,
-        player.height
-    );
-
-    ctx.restore();
-}
-
-
-
 function createSideWaves() {
-
     const wavePower = player.upgraded ? 2 : 1;
-
     const speedIntensity = Math.abs(player.velocityX) + Math.abs(player.velocityY);
 
     if (speedIntensity > 0.5) {
@@ -920,70 +1273,20 @@ function createSideWaves() {
     }
 }
 
-
-function drawRiver() {
-
-    // 🌳 LADO ESQUERDO (Desenha a imagem repetida verticalmente)
-    for (let i = -canvas.height; i < canvas.height * 2; i += canvas.height) {
-        // O cálculo do Y usa o landOffset para dar a sensação de movimento
-        let yPos = (i + landOffset) % (canvas.height * 2) - canvas.height;
-
-        ctx.drawImage(
-            landLeftImage,
-            0,          // X: encostado na esquerda
-            yPos,       // Y animado
-            riverX,     // Largura: vai até o início do rio
-            canvas.height // Altura: tamanho do canvas para preencher tudo
-        );
+function drawFoam(edgeX, side) {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    for (let i = 0; i < canvas.height; i += 15) {
+        // Seno composto para dar impressão de água batendo irregularmente
+        let wave = Math.sin(waveOffset + i * 0.05) * 8;
+        let xPos = (side === "left") ? edgeX + wave : edgeX - 5 + wave;
+        
+        ctx.beginPath();
+        ctx.arc(xPos, i, 3 + Math.random() * 2, 0, Math.PI * 2);
+        ctx.fill();
     }
-
-    // 🌳 LADO DIREITO
-    for (let i = -canvas.height; i < canvas.height * 2; i += canvas.height) {
-        let yPos = (i + landOffset) % (canvas.height * 2) - canvas.height;
-
-        ctx.drawImage(
-            landRightImage,
-            riverX + riverWidth,              // X: começa onde o rio termina
-            yPos,                             // Y animado
-            canvas.width - (riverX + riverWidth), // Largura: o que sobrar da tela
-            canvas.height
-        );
-    }
-
-    // 🌲 Árvores animadas
-    for (let i = 0; i < canvas.height; i += 120) {
-
-        const treeY =
-            (i + landOffset) % (canvas.height + 120) - 60;
-
-        // esquerda
-        drawTree(
-            riverX / 2,
-            treeY
-        );
-
-        // direita
-        drawTree(
-            riverX + riverWidth +
-            (canvas.width - (riverX + riverWidth)) / 2,
-            treeY
-        );
-    }
-
-    // 🎨 Gradiente de água
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-
-    gradient.addColorStop(0, "#1e90ff");   // azul claro
-    gradient.addColorStop(0.5, "#187bcd"); // médio
-    gradient.addColorStop(1, "#0f3057");   // fundo escuro
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(riverX, 0, riverWidth, canvas.height);
-    drawWaterReflection();
 }
 
 function drawTree(x, y) {
-
     // Tronco
     ctx.fillStyle = "#8B4513";
     ctx.fillRect(x - 5, y + 20, 10, 20);
@@ -1017,31 +1320,31 @@ function drawWaterReflection() {
 }
 
 function createBoatWaves() {
-
     const waveSize = player.upgraded ? 4 : 2;
     const spread = player.upgraded ? 25 : 15;
 
     for (let i = 0; i < 2; i++) {
-
+        // Partículas do motor (atrás)
         particles.push({
             x: player.x + Math.random() * player.width,
             y: player.y + player.height - 5,
             size: Math.random() * waveSize + 1,
             speedY: Math.random() * 1 + 0.5,
-            alpha: 0.5
+            alpha: 0.5,
+            decay: 0.01 + Math.random() * 0.02 // Novo: cada partícula some em um tempo diferente
         });
 
-        // laterais
+        // Partículas laterais
         particles.push({
             x: player.x - spread + Math.random() * (player.width + spread * 2),
             y: player.y + player.height / 2,
             size: Math.random() * waveSize,
             speedY: Math.random() * 0.5,
-            alpha: 0.4
+            alpha: 0.4,
+            decay: 0.005 + Math.random() * 0.01 // Novo: laterais duram um pouco mais
         });
     }
 }
-
 
 function drawWaterWaves() {
     const waveHeight = 7;
@@ -1069,39 +1372,19 @@ function drawWaterWaves() {
     }
 }
 
-
-function drawWaterTrail() {
-
-    particles.forEach((p, index) => {
-
-        p.y += p.speedY;
-        p.x += p.drift || 0;
-
-        p.alpha -= 0.02;
-
-        ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (p.alpha <= 0) {
-            particles.splice(index, 1);
-        }
-    });
-}
-
-
 // =============================
 // TECLADO
 // =============================
 document.addEventListener("keydown", (e) => {
     keys[e.key] = true;
+    if (gameState === "menu" && e.key.toLowerCase() === "r") {
+        showRankingScreen();
+    }
 
     if (gameState === "menu" && e.key === "Enter") {
         unlockAudio();
         startGame();
     }
-
 });
 
 document.addEventListener("keyup", (e) => {
@@ -1118,12 +1401,8 @@ canvas.addEventListener("touchstart", (e) => {
     }
 });
 
-
-
 function createMobileControls() {
-
     if (document.getElementById("mobileControls")) return;
-
     // Só para celular / tablet
     if (window.innerWidth > 900) return;
 
@@ -1200,7 +1479,6 @@ function updateMobileControls() {
     controls.style.display = "grid"; // ⚠️ IMPORTANTE: grid, não flex
 }
 
-
 // Para soltar a tecla quando tira o dedo
 canvas.addEventListener("touchend", (e) => {
     keys["ArrowLeft"] = false;
@@ -1210,7 +1488,6 @@ canvas.addEventListener("touchend", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-
     if (e.key === "ArrowLeft") currentDirection = "left";
     if (e.key === "ArrowRight") currentDirection = "right";
     if (e.key === "ArrowUp") currentDirection = "up";
@@ -1218,8 +1495,7 @@ document.addEventListener("keydown", (e) => {
 
 });
 
-
-
 gameLoop();
+
 setInterval(spawnObstacle, 1500);
 
