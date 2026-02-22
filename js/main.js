@@ -513,6 +513,11 @@ function update(deltaTime) {
     if (gameState === "playing") {
         waveOffset += 0.05; // Faz as ondas "pularem"
 
+        // Só cria ondas se o barco tiver alguma velocidade (funciona para os dois)
+        if (Math.abs(player.velocityX) > 0.1 || Math.abs(player.velocityY) > 0.1) {
+            createBoatWaves();
+        }
+
         createBoatWaves();
         updateParticles();
         updatePlayer();
@@ -535,8 +540,9 @@ function updateParticles() {
         // Faz a partícula subir ou se espalhar um pouco (opcional)
         p.y += riverSpeed * 0.8; 
         
-        // O SEGREDO: Diminuir o alpha gradualmente
-        p.alpha -= p.decay; // Ajuste este valor para o rastro sumir mais rápido ou devagar
+        // Se a partícula não tiver decay (por ser antiga), define um padrão
+        let decayRate = p.decay || 0.02;
+        p.alpha -= decayRate; // Ajuste este valor para o rastro sumir mais rápido ou devagar
 
         // Se a partícula sumiu, remove do array para não pesar o jogo
         if (p.alpha <= 0 || p.y > canvas.height) {
@@ -1058,6 +1064,7 @@ function drawWaterExplosion(x, y) {
 // =============================
 function updatePlayer() {
     if (gameState !== "playing") return;
+    updateMobileControls();
 
     // =========================
     // VELOCIDADE DO RIO
@@ -1192,26 +1199,23 @@ function updatePlayer() {
         player.y = 0;
 
     // =========================
-    // 🔥 ROTACIONAR BARCO
-
-    // =========================
     // PARTÍCULAS DE ÁGUA
     // =========================
-    if (Math.abs(player.velocityX) > 1 || Math.abs(player.velocityY) > 1) {
+    // if (Math.abs(player.velocityX) > 1 || Math.abs(player.velocityY) > 1) {
 
-        particles.push({
-            x: player.x + player.width / 2 + (Math.random() - 0.5) * 15,
-            y: player.y + player.height,
-            size: Math.random() * 6 + 2,
-            speedY: Math.random() * 2 + 1,
-            alpha: 1,
-            drift: (Math.random() - 0.5) * 1.5
-        });
+    //     particles.push({
+    //         x: player.x + player.width / 2 + (Math.random() - 0.5) * 15,
+    //         y: player.y + player.height,
+    //         size: Math.random() * 6 + 2,
+    //         speedY: Math.random() * 2 + 1,
+    //         alpha: 1,
+    //         drift: (Math.random() - 0.5) * 1.5
+    //     });
 
-        if (particles.length > 100) {
-            particles.shift();
-        }
-    }
+    //     if (particles.length > 100) {
+    //         particles.shift();
+    //     }
+    // }
     createSideWaves();
 
     // =========================
