@@ -708,7 +708,6 @@ function showWinScreen() {
         restartGame();
     };
 }
-
 //-----------------Exibir ranking---------------------------
 function showRankingScreen() {
     // Remove qualquer tela de vitória ou ranking que já esteja aberta
@@ -958,16 +957,41 @@ function draw() {
     }
 }
 
+// function drawMenu() {
+//     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+//     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+//     ctx.fillStyle = "white";
+//     ctx.font = "bold 40px Arial";
+//     ctx.textAlign = "center";
+
+//     ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 40);
+//     ctx.fillText("Pressione ENTER", canvas.width / 2, canvas.height / 2 + 20);
+// }
+
 function drawMenu() {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = "white";
-    ctx.font = "bold 40px Arial";
+    ctx.font = "bold 30px Arial"; // Fonte um pouco menor para caber no celular
     ctx.textAlign = "center";
+    ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 80);
 
-    ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.fillText("Pressione ENTER", canvas.width / 2, canvas.height / 2 + 20);
+    // No mobile, criamos botões HTML se eles não existirem
+    if (window.innerWidth <= 900 && !document.getElementById("menuButtons")) {
+        const menuDiv = document.createElement("div");
+        menuDiv.id = "menuButtons";
+        Object.assign(menuDiv.style, {
+            position: "fixed", top: "60%", left: "50%",
+            transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px"
+        });
+        menuDiv.innerHTML = `
+            <button onclick="startGame()" style="padding:15px 30px; font-size:18px; background:#2ecc71; color:white; border:none; border-radius:10px;">INICIAR JOGO</button>
+            <button onclick="showRankingScreen()" style="padding:15px 30px; font-size:18px; background:#f1c40f; color:white; border:none; border-radius:10px;">RANKING</button>
+        `;
+        document.body.appendChild(menuDiv);
+    }
 }
 function drawWindEffects() {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Riscos de vento quase invisíveis
@@ -1058,7 +1082,6 @@ function drawWaterExplosion(x, y) {
         });
     }
 }
-
 // =============================
 // PLAYER
 // =============================
@@ -1130,7 +1153,6 @@ function updatePlayer() {
         player.targetAngle = -Math.PI / 2;
     }
 
-
     // =========================
     // CONTROLE DO SOM DO MOTOR
     // =========================
@@ -1198,24 +1220,6 @@ function updatePlayer() {
     if (player.y < 0)
         player.y = 0;
 
-    // =========================
-    // PARTÍCULAS DE ÁGUA
-    // =========================
-    // if (Math.abs(player.velocityX) > 1 || Math.abs(player.velocityY) > 1) {
-
-    //     particles.push({
-    //         x: player.x + player.width / 2 + (Math.random() - 0.5) * 15,
-    //         y: player.y + player.height,
-    //         size: Math.random() * 6 + 2,
-    //         speedY: Math.random() * 2 + 1,
-    //         alpha: 1,
-    //         drift: (Math.random() - 0.5) * 1.5
-    //     });
-
-    //     if (particles.length > 100) {
-    //         particles.shift();
-    //     }
-    // }
     createSideWaves();
 
     // =========================
@@ -1475,12 +1479,13 @@ function updateMobileControls() {
 
     const isMobile = window.innerWidth <= 900;
 
-    if (!isMobile || gameState !== "playing") {
+    if (!isMobile || gameState === "playing") {
+        controls.style.display = "grid";
+    }else {
         controls.style.display = "none";
-        return;
     }
 
-    controls.style.display = "grid"; // ⚠️ IMPORTANTE: grid, não flex
+    // controls.style.display = "grid"; // ⚠️ IMPORTANTE: grid, não flex
 }
 
 // Para soltar a tecla quando tira o dedo
