@@ -54,7 +54,8 @@ let maxEnginePower = 6;
 let engineAcceleration = 0.2;
 
 //Áudio global do motor do barco
-const engineSound = new Audio("audio/audio1.mp3");
+// const engineSound = new Audio("audio/audio1.mp3");
+const engineSound = new Audio("audio/audio_barco.mpeg");
 engineSound.loop = true;
 engineSound.volume = 0;
 
@@ -233,16 +234,23 @@ function drawLives() {
 }
 
 function startGame(selectedLevel = 1) {
-    // Esconde o menu HTML
+    // 1. Esconde o menu HTML principal e botões extras se existirem
     const menu = document.getElementById("gameMenu");
     if (menu) menu.style.display = "none";
+    
+    const extraButtons = document.getElementById("menuButtons");
+    if (extraButtons) extraButtons.remove();
 
-    // 2. Define o estado e a fase escolhida
+    const instructions = document.getElementById("instructionsContainer");
+    if (instructions) instructions.remove();
+
+    // 2. Define o estado e a dificuldade
     gameState = "playing";
     level = selectedLevel;
     score = 0;
     lives = 3;
-    // Configura o cenário inicial baseado na fase escolhida
+
+    // 3. Configura o cenário inicial baseado na fase
     if (level === 1) {
         currentLandLeft = terraEsq1;
         currentLandRight = terraDir1;
@@ -256,40 +264,100 @@ function startGame(selectedLevel = 1) {
         currentLandRight = terraDir3;
         riverSpeed = 4.5;
     }
-    // 4. Reseta a Física e Posição do Barco (A parte antiga importante)
-    player.x = canvas.width / 2 - player.width / 2;
-    player.y = canvas.height * 0.6;
+
+    // 4. Reseta a Física e Posição do Barco
+    player.x = canvas.width / 2 - (player.width || 50) / 2;
+    player.y = canvas.height * 0.7; // Começa um pouco mais abaixo
     player.velocityX = 0;
     player.velocityY = 0;
     player.angle = 0;
     player.upgraded = false;
-    player.width = player.baseWidth;
-    player.height = player.baseHeight;
-
-    // 5. Reseta a Cobra e Inimigos
+    
+    // 5. Limpa Inimigos e Itens
     snakeActive = false;
-    snake.emerging = false;
-    snake.x = canvas.width / 2;
-    snake.y = canvas.height + 200;
-
-    // Limpa o jogo para começar do zero
     obstacles = [];
     coins = [];
     upgrades = [];
     particles = [];
 
     // 6. Áudio e Controles
-    unlockAudio();
-    enginePower = 0;
-    engineSound.pause();
-    engineSound.currentTime = 0;
+    if (typeof unlockAudio === "function") unlockAudio();
+    
+    if (engineSound) {
+        engineSound.pause();
+        engineSound.currentTime = 0;
+    }
 
+    // Atualiza o tamanho e controles para mobile
     resizeCanvas();
-    if (typeof createMobileControls === "function") {
-        createMobileControls();
+    if (typeof updateMobileControls === "function") {
         updateMobileControls();
     }
 }
+
+
+// function startGame(selectedLevel = 1) {
+//     // Esconde o menu HTML
+//     const menu = document.getElementById("gameMenu");
+//     if (menu) menu.style.display = "none";
+
+//     // REMOVE A TELA DE INSTRUÇÕES (se houver)
+//     const instructions = document.getElementById("instructionsContainer");
+//     if (instructions) instructions.remove();
+
+//     // 2. Define o estado e a fase escolhida
+//     gameState = "playing";
+//     level = selectedLevel;
+//     score = 0;
+//     lives = 3;
+//     // Configura o cenário inicial baseado na fase escolhida
+//     if (level === 1) {
+//         currentLandLeft = terraEsq1;
+//         currentLandRight = terraDir1;
+//         riverSpeed = 1.5;
+//     } else if (level === 2) {
+//         currentLandLeft = terraEsq2;
+//         currentLandRight = terraDir2;
+//         riverSpeed = 3.0;
+//     } else {
+//         currentLandLeft = terraEsq3;
+//         currentLandRight = terraDir3;
+//         riverSpeed = 4.5;
+//     }
+//     // 4. Reseta a Física e Posição do Barco (A parte antiga importante)
+//     player.x = canvas.width / 2 - player.width / 2;
+//     player.y = canvas.height * 0.6;
+//     player.velocityX = 0;
+//     player.velocityY = 0;
+//     player.angle = 0;
+//     player.upgraded = false;
+//     player.width = player.baseWidth;
+//     player.height = player.baseHeight;
+
+//     // 5. Reseta a Cobra e Inimigos
+//     snakeActive = false;
+//     snake.emerging = false;
+//     snake.x = canvas.width / 2;
+//     snake.y = canvas.height + 200;
+
+//     // Limpa o jogo para começar do zero
+//     obstacles = [];
+//     coins = [];
+//     upgrades = [];
+//     particles = [];
+
+//     // 6. Áudio e Controles
+//     unlockAudio();
+//     enginePower = 0;
+//     engineSound.pause();
+//     engineSound.currentTime = 0;
+
+//     resizeCanvas();
+//     if (typeof createMobileControls === "function") {
+//         createMobileControls();
+//         updateMobileControls();
+//     }
+// }
 
 function loseLife() {
     lives--;
@@ -491,6 +559,7 @@ function loadSnakeFrames() {
 }
 
 loadSnakeFrames();
+
 function drawSnake() {
     const sprite = snakeSprites[currentDirection][currentFrame];
     if (sprite) {
@@ -815,18 +884,38 @@ function drawFireworks() {
     ctx.globalAlpha = 1;
 }
 //------------------------------------------------------
+// function drawUI() {
+//     ctx.fillStyle = "white";
+//     ctx.font = "bold 24px Arial";
+//     ctx.textAlign = "right";
+
+//     // Desenha no canto superior direito com um pouco de margem
+//     ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
+//     ctx.fillText("Fase: " + level, canvas.width - 20, 70);
+
+//     // Ícone do Açaí ao lado do texto
+//     if (acaiImage.complete) {
+//         ctx.drawImage(acaiImage, canvas.width - 185, 18, 25, 25);
+//     }
+// }
 function drawUI() {
     ctx.fillStyle = "white";
     ctx.font = "bold 24px Arial";
     ctx.textAlign = "right";
 
-    // Desenha no canto superior direito com um pouco de margem
+    // Texto do Score e Fase
     ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
-    ctx.fillText("Fase: " + level, canvas.width - 20, 70);
+    ctx.fillText("Fase: " + level, canvas.width - 20, 75);
 
-    // Ícone do Açaí ao lado do texto
-    if (acaiImage.complete) {
-        ctx.drawImage(acaiImage, canvas.width - 185, 18, 25, 25);
+    // Desenha as vidas (Corações) no canto superior esquerdo
+    if (typeof drawLives === "function") {
+        drawLives();
+    }
+
+    // Ícone do Açaí (Ajustado para ficar alinhado ao texto)
+    if (acaiImage && acaiImage.complete) {
+        // O valor -180 pode variar dependendo do tamanho da sua fonte
+        ctx.drawImage(acaiImage, canvas.width - 210, 18, 28, 28);
     }
 }
 //------------------------------------------------------
@@ -957,42 +1046,44 @@ function draw() {
     }
 }
 
+
 // function drawMenu() {
-//     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+//     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
 //     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 //     ctx.fillStyle = "white";
-//     ctx.font = "bold 40px Arial";
+//     ctx.font = "bold 30px Arial"; // Fonte um pouco menor para caber no celular
 //     ctx.textAlign = "center";
+//     ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 80);
 
-//     ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 40);
-//     ctx.fillText("Pressione ENTER", canvas.width / 2, canvas.height / 2 + 20);
+//     //No mobile, criamos botões HTML se eles não existirem
+//     if (window.innerWidth <= 900 && !document.getElementById("menuButtons")) {
+//         const menuDiv = document.createElement("div");
+//         menuDiv.id = "menuButtons";
+//         Object.assign(menuDiv.style, {
+//             position: "fixed", top: "60%", left: "50%",
+//             transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px"
+//         });
+//         menuDiv.innerHTML = `
+//             <button onclick="startGame()" style="padding:15px 30px; font-size:18px; background:#2ecc71; color:white; border:none; border-radius:10px;">INICIAR JOGO</button>
+//             <button onclick="showRankingScreen()" style="padding:15px 30px; font-size:18px; background:#f1c40f; color:white; border:none; border-radius:10px;">RANKING</button>
+//         `;
+//         document.body.appendChild(menuDiv);
+//     }
 // }
 
 function drawMenu() {
+    // Escurece o fundo do canvas
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = "white";
-    ctx.font = "bold 30px Arial"; // Fonte um pouco menor para caber no celular
-    ctx.textAlign = "center";
-    ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 80);
-
-    // No mobile, criamos botões HTML se eles não existirem
-    if (window.innerWidth <= 900 && !document.getElementById("menuButtons")) {
-        const menuDiv = document.createElement("div");
-        menuDiv.id = "menuButtons";
-        Object.assign(menuDiv.style, {
-            position: "fixed", top: "60%", left: "50%",
-            transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px"
-        });
-        menuDiv.innerHTML = `
-            <button onclick="startGame()" style="padding:15px 30px; font-size:18px; background:#2ecc71; color:white; border:none; border-radius:10px;">INICIAR JOGO</button>
-            <button onclick="showRankingScreen()" style="padding:15px 30px; font-size:18px; background:#f1c40f; color:white; border:none; border-radius:10px;">RANKING</button>
-        `;
-        document.body.appendChild(menuDiv);
+    // Garante que o menu HTML esteja visível
+    const menu = document.getElementById("gameMenu");
+    if (menu && gameState === "menu") {
+        menu.style.display = "flex";
     }
 }
+
 function drawWindEffects() {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Riscos de vento quase invisíveis
     ctx.lineWidth = 1;
