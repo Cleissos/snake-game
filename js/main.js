@@ -10,13 +10,19 @@ let waveOffset = 0; // Crie essa variável no topo do código
 let fireworks = []; // Array para os fogos de artifício
 // ----------imagem do açaí para mudança de fase---------------
 const acaiImage = new Image();
-acaiImage.src = "assets/acai.png";
+acaiImage.src = "assets/cesta_acai.png";
 
 let score = 0;
 let level = 1;
 const coinsToNextLevel = 10;
 let coins = [];
 //----------------------------------------------------------
+
+let levelUpText = ""; // Armazena a frase (Ex: "Fase 2")
+let showLevelUp = false; // Controla se o texto deve aparecer ou não
+
+let gameTimer = 0; // Tempo total em segundos
+let timerInterval; // Referência para parar o cronômetro
 
 const terraEsq1 = new Image(); terraEsq1.src = "assets/terra_left1.png";
 const terraDir1 = new Image(); terraDir1.src = "assets/terra_right1.png";
@@ -70,6 +76,12 @@ boatUpgradeImage.src = "assets/barquinho3 (2).png";
 // Obstáculos
 const obstacleImage = new Image();
 obstacleImage.src = "assets/murure.png";
+
+const obstacleTronco2 = new Image();
+obstacleTronco2.src = "assets/Tronco2.png";
+
+const obstacleTronco3 = new Image();
+obstacleTronco3.src = "assets/tronco.png";
 
 // Upgrade
 const upgradeImage = new Image();
@@ -237,7 +249,7 @@ function startGame(selectedLevel = 1) {
     // 1. Esconde o menu HTML principal e botões extras se existirem
     const menu = document.getElementById("gameMenu");
     if (menu) menu.style.display = "none";
-    
+
     const extraButtons = document.getElementById("menuButtons");
     if (extraButtons) extraButtons.remove();
 
@@ -272,7 +284,7 @@ function startGame(selectedLevel = 1) {
     player.velocityY = 0;
     player.angle = 0;
     player.upgraded = false;
-    
+
     // 5. Limpa Inimigos e Itens
     snakeActive = false;
     obstacles = [];
@@ -282,7 +294,7 @@ function startGame(selectedLevel = 1) {
 
     // 6. Áudio e Controles
     if (typeof unlockAudio === "function") unlockAudio();
-    
+
     if (engineSound) {
         engineSound.pause();
         engineSound.currentTime = 0;
@@ -293,71 +305,17 @@ function startGame(selectedLevel = 1) {
     if (typeof updateMobileControls === "function") {
         updateMobileControls();
     }
+
+    gameTimer = 0; // Reseta o tempo
+    clearInterval(timerInterval); // Para qualquer cronômetro antigo
+    
+    // Inicia o contador: aumenta 1 a cada segundo
+    timerInterval = setInterval(() => {
+        if (gameState === "playing") {
+            gameTimer++;
+        }
+    }, 1000);
 }
-
-
-// function startGame(selectedLevel = 1) {
-//     // Esconde o menu HTML
-//     const menu = document.getElementById("gameMenu");
-//     if (menu) menu.style.display = "none";
-
-//     // REMOVE A TELA DE INSTRUÇÕES (se houver)
-//     const instructions = document.getElementById("instructionsContainer");
-//     if (instructions) instructions.remove();
-
-//     // 2. Define o estado e a fase escolhida
-//     gameState = "playing";
-//     level = selectedLevel;
-//     score = 0;
-//     lives = 3;
-//     // Configura o cenário inicial baseado na fase escolhida
-//     if (level === 1) {
-//         currentLandLeft = terraEsq1;
-//         currentLandRight = terraDir1;
-//         riverSpeed = 1.5;
-//     } else if (level === 2) {
-//         currentLandLeft = terraEsq2;
-//         currentLandRight = terraDir2;
-//         riverSpeed = 3.0;
-//     } else {
-//         currentLandLeft = terraEsq3;
-//         currentLandRight = terraDir3;
-//         riverSpeed = 4.5;
-//     }
-//     // 4. Reseta a Física e Posição do Barco (A parte antiga importante)
-//     player.x = canvas.width / 2 - player.width / 2;
-//     player.y = canvas.height * 0.6;
-//     player.velocityX = 0;
-//     player.velocityY = 0;
-//     player.angle = 0;
-//     player.upgraded = false;
-//     player.width = player.baseWidth;
-//     player.height = player.baseHeight;
-
-//     // 5. Reseta a Cobra e Inimigos
-//     snakeActive = false;
-//     snake.emerging = false;
-//     snake.x = canvas.width / 2;
-//     snake.y = canvas.height + 200;
-
-//     // Limpa o jogo para começar do zero
-//     obstacles = [];
-//     coins = [];
-//     upgrades = [];
-//     particles = [];
-
-//     // 6. Áudio e Controles
-//     unlockAudio();
-//     enginePower = 0;
-//     engineSound.pause();
-//     engineSound.currentTime = 0;
-
-//     resizeCanvas();
-//     if (typeof createMobileControls === "function") {
-//         createMobileControls();
-//         updateMobileControls();
-//     }
-// }
 
 function loseLife() {
     lives--;
@@ -477,11 +435,41 @@ function updateObstacles() {
     });
 }
 
+function spawnObstacle() {
+    console.log("Criando obstáculo para o nível: " + level); // <--- ADICIONE ISSO
+    const x = riverX + Math.random() * (riverWidth - 50);
+
+    // Escolhe a imagem baseada na fase atual
+    let currentImage;
+    if (level === 1) {
+        currentImage = obstacleImage; // Planta para a Fase 1
+    } else if (level === 2) {
+        currentImage = obstacleTronco2; // Tronco para a Fase 2
+    } else {
+        currentImage = obstacleTronco3;  // Pedra para a Fase 3
+    }
+
+    // Adicionei 'speed' aqui
+    obstacles.push({
+        x: x,
+        y: -50,
+        width: 30,
+        height: 30,
+        speed: riverSpeed + 1, // Ele desce um pouco mais rápido que o rio
+        image: currentImage
+    });
+}
+
 function drawObstacles() {
-    ctx.fillStyle = "brown";
     obstacles.forEach(obs => {
-        // ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-        ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
+        // Verifica se a imagem existe e foi carregada antes de desenhar
+        if (obs.image && obs.image.complete) {
+            ctx.drawImage(obs.image, obs.x, obs.y, obs.width, obs.height);
+        } else {
+            // Desenho de segurança caso a imagem falhe (opcional)
+            ctx.fillStyle = "brown";
+            ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        }
     });
 }
 
@@ -594,21 +582,21 @@ function update(deltaTime) {
         updateObstacles();
         updateUpgrades();
         updateCoins();
-        
+
     }
     if (gameState === "win") {
-            updateFireworks();
-            if (Math.random() < 0.05) createFirework();
-        }
+        updateFireworks();
+        if (Math.random() < 0.05) createFirework();
+    }
 }
 
 function updateParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
-        
+
         // Faz a partícula subir ou se espalhar um pouco (opcional)
-        p.y += riverSpeed * 0.8; 
-        
+        p.y += riverSpeed * 0.8;
+
         // Se a partícula não tiver decay (por ser antiga), define um padrão
         let decayRate = p.decay || 0.02;
         p.alpha -= decayRate; // Ajuste este valor para o rastro sumir mais rápido ou devagar
@@ -620,31 +608,18 @@ function updateParticles() {
     }
 }
 
-function spawnObstacle() {
-    const x = riverX + Math.random() * (riverWidth - 50);
-    // Adicionei 'speed' aqui
-    obstacles.push({ 
-        x: x, 
-        y: -50, 
-        width: 50, 
-        height: 50, 
-        speed: riverSpeed + 1, // Ele desce um pouco mais rápido que o rio
-        image: obstacleImage 
-    });
-}
-
 let upgrades = [];
 
 function spawnUpgrade() { // As estrelas
     const x = riverX + Math.random() * (riverWidth - 30);
     // Adicionei 'speed' aqui
-    upgrades.push({ 
-        x: x, 
-        y: -30, 
-        width: 30, 
-        height: 30, 
+    upgrades.push({
+        x: x,
+        y: -30,
+        width: 30,
+        height: 30,
         speed: riverSpeed,
-        image: upgradeImage 
+        image: upgradeImage
     });
 }
 
@@ -655,12 +630,12 @@ setInterval(() => {
 function spawnCoin() { // Açaí
     const x = riverX + Math.random() * (riverWidth - 25);
     // Adicionei 'speed' aqui
-    coins.push({ 
-        x: x, 
-        y: -25, 
-        width: 25, 
-        height: 25, 
-        speed: riverSpeed 
+    coins.push({
+        x: x,
+        y: -25,
+        width: 25,
+        height: 25,
+        speed: riverSpeed
     });
 }
 // Chame isso no seu setInterval ou dentro do update
@@ -701,19 +676,19 @@ setInterval(() => {
         spawnObstacle();
     }
 }, 2000);
-//---------------------------------------
+
 function checkLevelUp() {
     if (score >= coinsToNextLevel) {
         if (level < 3) {
-            alert("Nível " + level + "!");
-            keys = {}; // <--- ADICIONE ISSO AQUI
-            player.velocityX = 0; // Para o barco não "voar" com o embalo da fase anterior
-            player.velocityY = 0;
             level++;
-            score = 0; // Reseta o score para a nova fase ou mantém acumulado
-            riverSpeed += 1.5; // Aumenta a dificuldade
+            score = 0;
+            riverSpeed += 1.5;
 
-            // Lógica de troca manual
+            // Limpeza total para trocar os obstáculos
+            obstacles = [];
+            coins = [];
+
+            // Define as margens
             if (level === 2) {
                 currentLandLeft = terraEsq2;
                 currentLandRight = terraDir2;
@@ -721,19 +696,44 @@ function checkLevelUp() {
                 currentLandLeft = terraEsq3;
                 currentLandRight = terraDir3;
             }
-            obstacles.length = 0;
-            coins.length = 0;
-            keys = {}; // Reseta teclas para não bugar
+
+            // ATIVA O TÍTULO NA TELA
+            levelUpText = "FASE " + level;
+            showLevelUp = true;
+
+            // Faz o texto sumir após 2 segundos
+            setTimeout(() => {
+                showLevelUp = false;
+            }, 2000);
+
         } else {
-            // VITÓRIA TOTAL
-            gameState = "win"; // Você pode criar uma tela de vitória
-            engineSound.pause();
+            gameState = "win";
+            if (engineSound) engineSound.pause();
             showWinScreen();
         }
     }
 }
+//---------------------------------------
+
 //--------------------------------------------------------
 function showWinScreen() {
+
+    clearInterval(timerInterval); // Para o tempo imediatamente
+    
+    let classificacao = "";
+    
+    // Exemplo de lógica:
+    // Se terminou o jogo todo em menos de 60 segundos: Rank S
+    if (gameTimer < 60) {
+        classificacao = "S - Mestre do Rio";
+    } else if (gameTimer < 120) {
+        classificacao = "A - Piloto Ágil";
+    } else if (gameTimer < 180) {
+        classificacao = "B - Navegador";
+    } else {
+        classificacao = "C - Remador Lento";
+    }
+
     // Evita duplicados
     if (document.getElementById("winContainer")) return;
     const container = document.createElement("div");
@@ -743,13 +743,18 @@ function showWinScreen() {
         transform: "translate(-50%, -50%)",
         textAlign: "center", backgroundColor: "rgba(0,0,0,0.8)",
         padding: "30px", borderRadius: "20px", color: "white", zIndex: "2000",
-        fontFamily: "Arial"
+        // fontFamily: "Arial"
+        fontFamily: "Arial", border: "2px solid #f1c40f", minWidth: "300px"
     });
+
     container.innerHTML = `
-        <h1>🏆 VOCÊ VENCEU! 🏆</h1>
-        <p>Parabéns! Você escapou do rio.</p>
-        <input type="text" id="playerName" placeholder="Seu Nome" style="padding:10px; border-radius:5px; border:none;"><br><br>
-        <button id="saveScore" style="padding:10px 20px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:5px;">Salvar no Ranking</button>
+        <h1 style="color:#f1c40f">🏆 VOCÊ VENCEU! 🏆</h1>
+        <p style="font-size:1.2em">Tempo Total: <span style="color:#2ecc71">${gameTimer}s</span></p>
+        <p style="font-weight:bold">Rank: ${classificacao}</p>
+        <hr style="border:0; border-top:1px solid #444">
+        <p>Salve seu tempo no Ranking:</p>
+        <input type="text" id="playerName" placeholder="Seu Nome" style="padding:10px; border-radius:5px; border:none; width:80%; margin-bottom:10px;"><br>
+        <button id="saveScore" style="padding:10px 20px; cursor:pointer; background:#2ecc71; color:white; border:none; border-radius:5px; font-weight:bold;">Salvar</button>
         <button id="restartWin" style="padding:10px 20px; cursor:pointer; background:#3498db; color:white; border:none; border-radius:5px; margin-left:10px;">Jogar Denovo</button>
     `;
 
@@ -759,15 +764,19 @@ function showWinScreen() {
     document.getElementById("saveScore").onclick = () => {
         const nameInput = document.getElementById("playerName");
         const name = nameInput.value.trim() || "Anônimo";
+        
+        // Aqui você chama sua função de salvar
+        if (typeof saveToRanking === "function") {
+            saveToRanking(name, gameTimer); 
+        }
 
-        saveToRanking(name); // Salva no localStorage
-
-        // Pequeno efeito visual antes de abrir o ranking
         nameInput.disabled = true;
         document.getElementById("saveScore").innerText = "Salvo!";
+        document.getElementById("saveScore").style.background = "#95a5a6";
+        document.getElementById("saveScore").disabled = true;
 
         setTimeout(() => {
-            showRankingScreen(); // Abre a telinha de Ranking que criamos acima
+            if (typeof showRankingScreen === "function") showRankingScreen();
         }, 1000);
     };
 
@@ -778,8 +787,106 @@ function showWinScreen() {
     };
 }
 //-----------------Exibir ranking---------------------------
+// function showRankingScreen() {
+//     // Remove qualquer tela de vitória ou ranking que já esteja aberta
+//     const oldWin = document.getElementById("winContainer");
+//     if (oldWin) oldWin.remove();
+
+//     const oldRank = document.getElementById("rankingContainer");
+//     if (oldRank) oldRank.remove();
+
+//     const container = document.createElement("div");
+//     container.id = "rankingContainer";
+//     Object.assign(container.style, {
+//         position: "fixed", top: "50%", left: "50%",
+//         transform: "translate(-50%, -50%)",
+//         backgroundColor: "rgba(20, 30, 48, 0.95)",
+//         padding: "30px", borderRadius: "15px", color: "white",
+//         zIndex: "3000", fontFamily: "Arial", textAlign: "center",
+//         boxShadow: "0 0 20px rgba(0,0,0,0.5)", 
+//         minWidth: "450px" // Aumentado para caber as novas colunas
+//     });
+
+//     // Pega os dados do localStorage (Usando a chave correta que salvamos: riverRanking)
+//     let ranking = JSON.parse(localStorage.getItem("riverRanking") || "[]");
+
+//     // Ordena por menor tempo (o mais rápido no topo)
+//     ranking.sort((a, b) => a.time - b.time);
+
+//     let tableHTML = `
+//         <h2 style="color: #f1c40f;">🏆 TOP ESCAPISTAS 🏆</h2>
+//         <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
+//             <thead>
+//                 <tr style="border-bottom: 2px solid #555; color: #f1c40f;">
+//                     <th style="padding: 10px;">Nome</th>
+//                     <th style="padding: 10px;">Tempo</th>
+//                     <th style="padding: 10px;">Rank</th>
+//                     <th style="padding: 10px;">Data</th>
+//                 </tr>
+//             </thead>
+//             <tbody>
+//     `;
+
+//     if (ranking.length === 0) {
+//         tableHTML += `<tr><td colspan="4" style="padding: 20px;">Nenhum recorde ainda!</td></tr>`;
+//     } else {
+//         // Mostra os top 10 melhores tempos
+//         ranking.slice(0, 10).forEach(item => {
+//             tableHTML += `
+//                 <tr style="border-bottom: 1px solid #333;">
+//                     <td style="padding: 10px;">${item.name}</td>
+//                     <td style="padding: 10px; color: #2ecc71; font-weight: bold;">${item.time}s</td>
+//                     <td style="padding: 10px; font-style: italic; font-size: 0.9em;">${item.rank || "---"}</td>
+//                     <td style="padding: 10px;">${item.date}</td>
+//                 </tr>
+//             `;
+//         });
+//     }
+
+//     tableHTML += `
+//             </tbody>
+//         </table>
+//         <br>
+//         <button id="closeRanking" style="padding: 10px 20px; cursor:pointer; background:#e74c3c; color:white; border:none; border-radius:5px; font-weight: bold;">Fechar</button>
+//     `;
+
+//     container.innerHTML = tableHTML;
+//     document.body.appendChild(container);
+
+//     document.getElementById("closeRanking").onclick = () => {
+//         container.remove();
+//         // Se o jogo acabou em vitória, ao fechar o ranking voltamos ao menu/reiniciamos
+//         if (gameState === "win") {
+//             restartGame();
+//         }
+//     };
+// }
+
+function saveToRanking(name, time) {
+    let rankDesc = "";
+    if (time < 60) rankDesc = "S - Mestre";
+    else if (time < 120) rankDesc = "A - Ágil";
+    else if (time < 180) rankDesc = "B - Navegador";
+    else rankDesc = "C - Lento";
+
+    const newEntry = {
+        name: name,      // Antes era 'nome'
+        time: time,      // Antes era 'tempo'
+        rank: rankDesc,
+        date: new Date().toLocaleDateString('pt-BR') // Antes era 'data'
+    };
+
+    // Usando a chave única 'riverRanking' para as duas funções
+    let ranking = JSON.parse(localStorage.getItem("riverRanking")) || [];
+    
+    ranking.push(newEntry);
+    ranking.sort((a, b) => a.time - b.time);
+    ranking = ranking.slice(0, 10);
+
+    localStorage.setItem("riverRanking", JSON.stringify(ranking));
+}
+
 function showRankingScreen() {
-    // Remove qualquer tela de vitória ou ranking que já esteja aberta
     const oldWin = document.getElementById("winContainer");
     if (oldWin) oldWin.remove();
 
@@ -794,18 +901,23 @@ function showRankingScreen() {
         backgroundColor: "rgba(20, 30, 48, 0.95)",
         padding: "30px", borderRadius: "15px", color: "white",
         zIndex: "3000", fontFamily: "Arial", textAlign: "center",
-        boxShadow: "0 0 20px rgba(0,0,0,0.5)", minWidth: "300px"
+        boxShadow: "0 0 20px rgba(0,0,0,0.5)", 
+        minWidth: "450px"
     });
 
-    // Pega os dados do localStorage e ordena (se você tivesse pontuação, ordenaria por ela)
     let ranking = JSON.parse(localStorage.getItem("riverRanking") || "[]");
+
+    // Ordenação garantida
+    ranking.sort((a, b) => a.time - b.time);
 
     let tableHTML = `
         <h2 style="color: #f1c40f;">🏆 TOP ESCAPISTAS 🏆</h2>
         <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
             <thead>
-                <tr style="border-bottom: 2px solid #555;">
+                <tr style="border-bottom: 2px solid #555; color: #f1c40f;">
                     <th style="padding: 10px;">Nome</th>
+                    <th style="padding: 10px;">Tempo</th>
+                    <th style="padding: 10px;">Rank</th>
                     <th style="padding: 10px;">Data</th>
                 </tr>
             </thead>
@@ -813,41 +925,70 @@ function showRankingScreen() {
     `;
 
     if (ranking.length === 0) {
-        tableHTML += `<tr><td colspan="2" style="padding: 20px;">Nenhum recorde ainda!</td></tr>`;
+        tableHTML += `<tr><td colspan="4" style="padding: 20px;">Nenhum recorde ainda!</td></tr>`;
     } else {
-        // Mostra os últimos 10 que venceram
-        ranking.slice(-10).reverse().forEach(item => {
+        ranking.forEach(item => {
             tableHTML += `
                 <tr style="border-bottom: 1px solid #333;">
-                    <td style="padding: 10px;">${item.name}</td>
-                    <td style="padding: 10px;">${item.date}</td>
+                    <td style="padding: 10px;">${item.name || "---"}</td>
+                    <td style="padding: 10px; color: #2ecc71; font-weight: bold;">${item.time ? item.time + 's' : "---"}</td>
+                    <td style="padding: 10px; font-style: italic; font-size: 0.9em;">${item.rank || "---"}</td>
+                    <td style="padding: 10px;">${item.date || "---"}</td>
                 </tr>
             `;
         });
     }
 
-    tableHTML += `
-            </tbody>
-        </table>
-        <br>
-        <button id="closeRanking" style="padding: 10px 20px; cursor:pointer; background:#e74c3c; color:white; border:none; border-radius:5px;">Fechar</button>
-    `;
+    tableHTML += `</tbody></table><br>
+        <button id="clearRanking" style="padding: 5px 10px; cursor:pointer; background:transparent; color:#777; border:1px solid #444; border-radius:5px; font-size:10px; margin-bottom:10px;">Limpar Tudo</button><br>
+        <button id="closeRanking" style="padding: 10px 20px; cursor:pointer; background:#e74c3c; color:white; border:none; border-radius:5px; font-weight: bold;">Fechar</button>`;
 
     container.innerHTML = tableHTML;
     document.body.appendChild(container);
 
+    // Botão para limpar o lixo antigo e começar do zero
+    document.getElementById("clearRanking").onclick = () => {
+        if(confirm("Deseja apagar todos os recordes?")) {
+            localStorage.removeItem("riverRanking");
+            showRankingScreen();
+        }
+    };
+
     document.getElementById("closeRanking").onclick = () => {
         container.remove();
-        if (gameState === "win") restartGame(); // Se fechar após vencer, reinicia o jogo
+        if (gameState === "win") restartGame();
     };
 }
 
-//-----------------------------fim exibir ranking----------------------
-function saveToRanking(name) {
-    let ranking = JSON.parse(localStorage.getItem("riverRanking") || "[]");
-    ranking.push({ name: name, date: new Date().toLocaleDateString() });
-    localStorage.setItem("riverRanking", JSON.stringify(ranking));
-}
+
+// function saveToRanking(name, time) {
+//     // Calcula o Rank novamente para salvar o texto correto
+//     let rankDesc = "";
+//     if (time < 60) rankDesc = "S - Mestre";
+//     else if (time < 120) rankDesc = "A - Ágil";
+//     else if (time < 180) rankDesc = "B - Navegador";
+//     else rankDesc = "C - Lento";
+
+//     const newEntry = {
+//         nome: name,
+//         tempo: time,
+//         rank: rankDesc,
+//         data: new Date().toLocaleDateString('pt-BR')
+//     };
+
+//     // Pega a lista atual ou cria uma vazia
+//     let ranking = JSON.parse(localStorage.getItem("riverEscapeRanking")) || [];
+    
+//     ranking.push(newEntry);
+
+//     // Ordena por menor tempo (quem faz mais rápido fica no topo)
+//     ranking.sort((a, b) => a.tempo - b.tempo);
+
+//     // Salva apenas os 10 melhores
+//     ranking = ranking.slice(0, 10);
+
+//     localStorage.setItem("riverEscapeRanking", JSON.stringify(ranking));
+// }
 
 function createFirework() {
     if (gameState !== "win") return;
@@ -884,28 +1025,33 @@ function drawFireworks() {
     ctx.globalAlpha = 1;
 }
 //------------------------------------------------------
-// function drawUI() {
-//     ctx.fillStyle = "white";
-//     ctx.font = "bold 24px Arial";
-//     ctx.textAlign = "right";
 
-//     // Desenha no canto superior direito com um pouco de margem
-//     ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
-//     ctx.fillText("Fase: " + level, canvas.width - 20, 70);
-
-//     // Ícone do Açaí ao lado do texto
-//     if (acaiImage.complete) {
-//         ctx.drawImage(acaiImage, canvas.width - 185, 18, 25, 25);
-//     }
-// }
 function drawUI() {
     ctx.fillStyle = "white";
     ctx.font = "bold 24px Arial";
-    ctx.textAlign = "right";
+    // ctx.textAlign = "right";
+    ctx.shadowBlur = 4; // Adiciona uma sombrinha para ler melhor sobre o rio
+    ctx.shadowColor = "black";
+
+    // Mostra o Score e o Tempo
+    // ctx.fillText("Açaís: " + score, 20, 70);
+    // ctx.fillText("Tempo: " + gameTimer + "s", 20, 100);
+
+    // --- LADO ESQUERDO (Açaís e Tempo) ---
+    ctx.textAlign = "left"; 
+    ctx.fillText("Cesta: " + score, 20, 70);
+    ctx.fillText("Tempo: " + gameTimer + "s", 20, 100);
 
     // Texto do Score e Fase
+    // ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
+    // ctx.fillText("Fase: " + level, canvas.width - 20, 75);
+    // --- LADO DIREITO (Score e Fase) ---
+    ctx.textAlign = "right";
     ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
     ctx.fillText("Fase: " + level, canvas.width - 20, 75);
+
+    // Resetar sombra para não afetar outros desenhos
+    ctx.shadowBlur = 0;
 
     // Desenha as vidas (Corações) no canto superior esquerdo
     if (typeof drawLives === "function") {
@@ -938,12 +1084,12 @@ function drawRiver() {
     ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
     for (let i = 0; i < canvas.height; i += 20) {
         let wave = Math.sin(waveOffset + i * 0.05) * 7;
-        
+
         // Espuma esquerda
         ctx.beginPath();
         ctx.arc(riverX + wave, i, 4, 0, Math.PI * 2);
         ctx.fill();
-        
+
         // Espuma direita
         ctx.beginPath();
         ctx.arc(riverX + riverWidth + wave, i, 4, 0, Math.PI * 2);
@@ -973,7 +1119,7 @@ function drawWindMist() {
     ctx.save();
     ctx.globalAlpha = 0.1;
     ctx.fillStyle = "white";
-    for(let i = 0; i < 3; i++) {
+    for (let i = 0; i < 3; i++) {
         let yMist = (Date.now() * 0.05 + i * 300) % canvas.height;
         ctx.fillRect(riverX, yMist, riverWidth, 20);
     }
@@ -994,10 +1140,10 @@ function drawPlayer() {
     ctx.save();
     ctx.translate(player.x + player.width / 2, player.y + player.height / 2);
     ctx.rotate(player.angle);
-    
+
     // Escolhe a imagem (normal ou upgrade)
     let img = player.upgraded ? boatUpgradeImage : boatImage;
-    
+
     if (img.complete) {
         ctx.drawImage(img, -player.width / 2, -player.height / 2, player.width, player.height);
     } else {
@@ -1012,15 +1158,15 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === "playing" || gameState === "paused" || gameState === "win") {
-        
+
         // 1. Camada de Fundo (Terra/Margens)
-        drawLand(); 
+        drawLand();
 
         // 2. O Rio e as Ondas (Área azul e espuma)
-        drawRiver(); 
+        drawRiver();
 
         // 3. Itens e Inimigos
-        drawItems(); // Nova função que agrupa Açaí, Estrelas e Obstáculos
+        drawItems(); 
         if (snakeActive) drawSnake();
 
         // 4. O Jogador e seu rastro
@@ -1028,11 +1174,29 @@ function draw() {
         drawPlayer();
 
         // 5. Efeitos de Clima (Vento/Maresia)
-        drawWindMist(); 
+        drawWindMist();
 
-        // 6. Interface
+        // 6. Interface (Score e Vidas)
         drawUI();
         drawLives();
+
+        // --- NOVO: TÍTULO DE FASE (Aparece por cima de tudo) ---
+        if (showLevelUp) {
+            ctx.save();
+            // Faixa preta semi-transparente no meio
+            ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+            ctx.fillRect(0, canvas.height / 2 - 60, canvas.width, 120);
+
+            // Texto "FASE X"
+            ctx.fillStyle = "#f1c40f"; // Amarelo
+            ctx.font = "bold 60px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "black";
+            ctx.fillText(levelUpText, canvas.width / 2, canvas.height / 2);
+            ctx.restore();
+        }
 
         // 7. Fogos de Artifício (Só aparecem se vencer)
         if (gameState === "win") {
@@ -1046,31 +1210,6 @@ function draw() {
     }
 }
 
-
-// function drawMenu() {
-//     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-//     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-//     ctx.fillStyle = "white";
-//     ctx.font = "bold 30px Arial"; // Fonte um pouco menor para caber no celular
-//     ctx.textAlign = "center";
-//     ctx.fillText("RIVER ESCAPE", canvas.width / 2, canvas.height / 2 - 80);
-
-//     //No mobile, criamos botões HTML se eles não existirem
-//     if (window.innerWidth <= 900 && !document.getElementById("menuButtons")) {
-//         const menuDiv = document.createElement("div");
-//         menuDiv.id = "menuButtons";
-//         Object.assign(menuDiv.style, {
-//             position: "fixed", top: "60%", left: "50%",
-//             transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", gap: "10px"
-//         });
-//         menuDiv.innerHTML = `
-//             <button onclick="startGame()" style="padding:15px 30px; font-size:18px; background:#2ecc71; color:white; border:none; border-radius:10px;">INICIAR JOGO</button>
-//             <button onclick="showRankingScreen()" style="padding:15px 30px; font-size:18px; background:#f1c40f; color:white; border:none; border-radius:10px;">RANKING</button>
-//         `;
-//         document.body.appendChild(menuDiv);
-//     }
-// }
 
 function drawMenu() {
     // Escurece o fundo do canvas
@@ -1378,7 +1517,7 @@ function drawFoam(edgeX, side) {
         // Seno composto para dar impressão de água batendo irregularmente
         let wave = Math.sin(waveOffset + i * 0.05) * 8;
         let xPos = (side === "left") ? edgeX + wave : edgeX - 5 + wave;
-        
+
         ctx.beginPath();
         ctx.arc(xPos, i, 3 + Math.random() * 2, 0, Math.PI * 2);
         ctx.fill();
@@ -1572,7 +1711,7 @@ function updateMobileControls() {
 
     if (!isMobile || gameState === "playing") {
         controls.style.display = "grid";
-    }else {
+    } else {
         controls.style.display = "none";
     }
 
