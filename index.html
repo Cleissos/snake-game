@@ -10,30 +10,30 @@
 
 <body>
     <div id="gameMenu" class="overlay">
-    <div class="menu-content">
-        <h1 class="game-title">RIVER ESCAPE</h1>
-        
-        <div class="section">
-            <h3>🎮 COMO JOGAR</h3>
-            <p>Use as <b>Setas</b> para navegar no rio.</p>
-            <p>Colete <b>Açaí</b> para passar de fase.</p>
-            <p>Fuja dos troncos e da Cobra Grande!</p>
-        </div>
+        <div class="menu-content">
+            <h1 class="game-title">RIVER RACE</h1>
 
-        <div class="section">
-            <h3>🚩 INICIAR POR:</h3>
-            <div class="level-selector">
-                <button onclick="startGame(1)">Fase 1</button>
-                <button onclick="startGame(2)">Fase 2</button>
-                <button onclick="startGame(3)">Fase 3</button>
+            <div class="section">
+                <h3>🎮 COMO JOGAR</h3>
+                <p>Use as <b>Setas</b> para navegar no rio.</p>
+                <p>Colete <b>Açaí</b> para passar de fase.</p>
+                <p>Fuja dos obstáculos e da Cobra Grande!</p>
+            </div>
+
+            <div class="section">
+                <h3>🚩 INICIAR POR:</h3>
+                <div class="level-selector">
+                    <button onclick="startGame(1)">Fase 1</button>
+                    <button onclick="startGame(2)">Fase 2</button>
+                    <button onclick="startGame(3)">Fase 3</button>
+                </div>
+            </div>
+
+            <div class="menu-footer">
+                <button class="btn-main" onclick="showRankingScreen()">🏆 Ver Ranking (R)</button>
             </div>
         </div>
-
-        <div class="menu-footer">
-            <button class="btn-main" onclick="showRankingScreen()">🏆 Ver Ranking (R)</button>
-        </div>
     </div>
-</div>
     <canvas id="gameCanvas"></canvas>
 
     <script src="js/main.js"></script>

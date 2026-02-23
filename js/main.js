@@ -65,6 +65,10 @@ const engineSound = new Audio("audio/audio_barco.mpeg");
 engineSound.loop = true;
 engineSound.volume = 0;
 
+const bgMusic = new Audio("audio/som_jogo.mp3"); // Coloque o caminho do seu arquivo
+bgMusic.loop = true;      // Faz a música recomeçar sozinha
+bgMusic.volume = 0.5;    // Volume em 50% para não abafar os efeitos
+
 const boatImage = new Image();
 boatImage.src = "assets/boat.png";
 const snakeImage = new Image();
@@ -292,6 +296,11 @@ function startGame(selectedLevel = 1) {
     upgrades = [];
     particles = [];
 
+    // Toca a música de fundo
+    bgMusic.play().catch(error => {
+        console.log("O navegador bloqueou o áudio automático. O som tocará após o primeiro clique.");
+    });
+
     // 6. Áudio e Controles
     if (typeof unlockAudio === "function") unlockAudio();
 
@@ -308,7 +317,7 @@ function startGame(selectedLevel = 1) {
 
     gameTimer = 0; // Reseta o tempo
     clearInterval(timerInterval); // Para qualquer cronômetro antigo
-    
+
     // Inicia o contador: aumenta 1 a cada segundo
     timerInterval = setInterval(() => {
         if (gameState === "playing") {
@@ -337,6 +346,12 @@ function loseLife() {
 
     if (lives <= 0) {
         gameState = "gameover";
+    }
+    // ... lógica de vidas
+    if (lives <= 0) {
+        gameState = "gameover";
+        bgMusic.pause(); // Para a música
+        bgMusic.currentTime = 0; // Volta para o início
     }
 }
 
@@ -588,6 +603,8 @@ function update(deltaTime) {
         updateFireworks();
         if (Math.random() < 0.05) createFirework();
     }
+    // Dentro do loop de update
+    bgMusic.volume = enginePower > 4 ? 0.3 : 0.5;
 }
 
 function updateParticles() {
@@ -717,11 +734,11 @@ function checkLevelUp() {
 
 //--------------------------------------------------------
 function showWinScreen() {
-
+    bgMusic.pause(); // Para a música para tocar os fogos ou silêncio
     clearInterval(timerInterval); // Para o tempo imediatamente
-    
+
     let classificacao = "";
-    
+
     // Exemplo de lógica:
     // Se terminou o jogo todo em menos de 60 segundos: Rank S
     if (gameTimer < 60) {
@@ -764,10 +781,10 @@ function showWinScreen() {
     document.getElementById("saveScore").onclick = () => {
         const nameInput = document.getElementById("playerName");
         const name = nameInput.value.trim() || "Anônimo";
-        
+
         // Aqui você chama sua função de salvar
         if (typeof saveToRanking === "function") {
-            saveToRanking(name, gameTimer); 
+            saveToRanking(name, gameTimer);
         }
 
         nameInput.disabled = true;
@@ -787,80 +804,7 @@ function showWinScreen() {
     };
 }
 //-----------------Exibir ranking---------------------------
-// function showRankingScreen() {
-//     // Remove qualquer tela de vitória ou ranking que já esteja aberta
-//     const oldWin = document.getElementById("winContainer");
-//     if (oldWin) oldWin.remove();
 
-//     const oldRank = document.getElementById("rankingContainer");
-//     if (oldRank) oldRank.remove();
-
-//     const container = document.createElement("div");
-//     container.id = "rankingContainer";
-//     Object.assign(container.style, {
-//         position: "fixed", top: "50%", left: "50%",
-//         transform: "translate(-50%, -50%)",
-//         backgroundColor: "rgba(20, 30, 48, 0.95)",
-//         padding: "30px", borderRadius: "15px", color: "white",
-//         zIndex: "3000", fontFamily: "Arial", textAlign: "center",
-//         boxShadow: "0 0 20px rgba(0,0,0,0.5)", 
-//         minWidth: "450px" // Aumentado para caber as novas colunas
-//     });
-
-//     // Pega os dados do localStorage (Usando a chave correta que salvamos: riverRanking)
-//     let ranking = JSON.parse(localStorage.getItem("riverRanking") || "[]");
-
-//     // Ordena por menor tempo (o mais rápido no topo)
-//     ranking.sort((a, b) => a.time - b.time);
-
-//     let tableHTML = `
-//         <h2 style="color: #f1c40f;">🏆 TOP ESCAPISTAS 🏆</h2>
-//         <table style="width: 100%; margin-top: 10px; border-collapse: collapse;">
-//             <thead>
-//                 <tr style="border-bottom: 2px solid #555; color: #f1c40f;">
-//                     <th style="padding: 10px;">Nome</th>
-//                     <th style="padding: 10px;">Tempo</th>
-//                     <th style="padding: 10px;">Rank</th>
-//                     <th style="padding: 10px;">Data</th>
-//                 </tr>
-//             </thead>
-//             <tbody>
-//     `;
-
-//     if (ranking.length === 0) {
-//         tableHTML += `<tr><td colspan="4" style="padding: 20px;">Nenhum recorde ainda!</td></tr>`;
-//     } else {
-//         // Mostra os top 10 melhores tempos
-//         ranking.slice(0, 10).forEach(item => {
-//             tableHTML += `
-//                 <tr style="border-bottom: 1px solid #333;">
-//                     <td style="padding: 10px;">${item.name}</td>
-//                     <td style="padding: 10px; color: #2ecc71; font-weight: bold;">${item.time}s</td>
-//                     <td style="padding: 10px; font-style: italic; font-size: 0.9em;">${item.rank || "---"}</td>
-//                     <td style="padding: 10px;">${item.date}</td>
-//                 </tr>
-//             `;
-//         });
-//     }
-
-//     tableHTML += `
-//             </tbody>
-//         </table>
-//         <br>
-//         <button id="closeRanking" style="padding: 10px 20px; cursor:pointer; background:#e74c3c; color:white; border:none; border-radius:5px; font-weight: bold;">Fechar</button>
-//     `;
-
-//     container.innerHTML = tableHTML;
-//     document.body.appendChild(container);
-
-//     document.getElementById("closeRanking").onclick = () => {
-//         container.remove();
-//         // Se o jogo acabou em vitória, ao fechar o ranking voltamos ao menu/reiniciamos
-//         if (gameState === "win") {
-//             restartGame();
-//         }
-//     };
-// }
 
 function saveToRanking(name, time) {
     let rankDesc = "";
@@ -878,7 +822,7 @@ function saveToRanking(name, time) {
 
     // Usando a chave única 'riverRanking' para as duas funções
     let ranking = JSON.parse(localStorage.getItem("riverRanking")) || [];
-    
+
     ranking.push(newEntry);
     ranking.sort((a, b) => a.time - b.time);
     ranking = ranking.slice(0, 10);
@@ -901,7 +845,7 @@ function showRankingScreen() {
         backgroundColor: "rgba(20, 30, 48, 0.95)",
         padding: "30px", borderRadius: "15px", color: "white",
         zIndex: "3000", fontFamily: "Arial", textAlign: "center",
-        boxShadow: "0 0 20px rgba(0,0,0,0.5)", 
+        boxShadow: "0 0 20px rgba(0,0,0,0.5)",
         minWidth: "450px"
     });
 
@@ -948,7 +892,7 @@ function showRankingScreen() {
 
     // Botão para limpar o lixo antigo e começar do zero
     document.getElementById("clearRanking").onclick = () => {
-        if(confirm("Deseja apagar todos os recordes?")) {
+        if (confirm("Deseja apagar todos os recordes?")) {
             localStorage.removeItem("riverRanking");
             showRankingScreen();
         }
@@ -959,36 +903,6 @@ function showRankingScreen() {
         if (gameState === "win") restartGame();
     };
 }
-
-
-// function saveToRanking(name, time) {
-//     // Calcula o Rank novamente para salvar o texto correto
-//     let rankDesc = "";
-//     if (time < 60) rankDesc = "S - Mestre";
-//     else if (time < 120) rankDesc = "A - Ágil";
-//     else if (time < 180) rankDesc = "B - Navegador";
-//     else rankDesc = "C - Lento";
-
-//     const newEntry = {
-//         nome: name,
-//         tempo: time,
-//         rank: rankDesc,
-//         data: new Date().toLocaleDateString('pt-BR')
-//     };
-
-//     // Pega a lista atual ou cria uma vazia
-//     let ranking = JSON.parse(localStorage.getItem("riverEscapeRanking")) || [];
-    
-//     ranking.push(newEntry);
-
-//     // Ordena por menor tempo (quem faz mais rápido fica no topo)
-//     ranking.sort((a, b) => a.tempo - b.tempo);
-
-//     // Salva apenas os 10 melhores
-//     ranking = ranking.slice(0, 10);
-
-//     localStorage.setItem("riverEscapeRanking", JSON.stringify(ranking));
-// }
 
 function createFirework() {
     if (gameState !== "win") return;
@@ -1033,18 +947,11 @@ function drawUI() {
     ctx.shadowBlur = 4; // Adiciona uma sombrinha para ler melhor sobre o rio
     ctx.shadowColor = "black";
 
-    // Mostra o Score e o Tempo
-    // ctx.fillText("Açaís: " + score, 20, 70);
-    // ctx.fillText("Tempo: " + gameTimer + "s", 20, 100);
-
     // --- LADO ESQUERDO (Açaís e Tempo) ---
-    ctx.textAlign = "left"; 
+    ctx.textAlign = "left";
     ctx.fillText("Cesta: " + score, 20, 70);
     ctx.fillText("Tempo: " + gameTimer + "s", 20, 100);
 
-    // Texto do Score e Fase
-    // ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
-    // ctx.fillText("Fase: " + level, canvas.width - 20, 75);
     // --- LADO DIREITO (Score e Fase) ---
     ctx.textAlign = "right";
     ctx.fillText("Score: " + score + " / " + coinsToNextLevel, canvas.width - 20, 40);
@@ -1166,7 +1073,7 @@ function draw() {
         drawRiver();
 
         // 3. Itens e Inimigos
-        drawItems(); 
+        drawItems();
         if (snakeActive) drawSnake();
 
         // 4. O Jogador e seu rastro
